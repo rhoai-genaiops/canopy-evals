@@ -1,6 +1,5 @@
 prompts:
-  - 'Convert this English to {{language}}: {{input}}'
-  - 'Translate to {{language}}: {{input}}'
+  - file://../prompts/summary_prompt.txt
 providers:
   - id: https
     config:

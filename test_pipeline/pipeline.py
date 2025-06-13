@@ -7,19 +7,31 @@ This pipeline implements an automated testing workflow that:
 3. Executes promptfoo tests
 """
 
+import kfp
 from typing import NamedTuple, Optional, List
-from kfp import dsl, components
-from kfp.components import InputPath, OutputPath
+from kfp import dsl
+from kfp.dsl import (
+    component,
+    Output,
+    HTML,
+)
+from kfp import kubernetes
+from typing import NamedTuple, List
+from dataclasses import dataclass
+
+@dataclass
+class ConfigPair:
+    config_path: str
+    result_path: str
 
 # Define the container image from our Containerfile
-CONTAINER_IMAGE = "promptfoo-test-runner:latest"
+CONTAINER_IMAGE = "quay.io/rlundber/promptfoo:0.1"
 
-@components.create_component_from_func
+@component(base_image='python:3.9')
 def git_clone_op(
     repo_url: str,
-    dest_path: OutputPath("Directory"),
     branch: str = "main"
-) -> NamedTuple("Outputs", [("repo_path", str)]):
+):
     """Clone a Git repository to the specified path.
     
     Args:
@@ -40,49 +52,35 @@ def git_clone_op(
         "--single-branch",
         "--depth", "1",
         repo_url,
-        dest_path
+        "/prompts"
     ], check=True)
-    
-    return (dest_path,)
 
-@components.create_component_from_func
+    for item in os.listdir("/prompts"):
+        print(item)
+
+@component(base_image='python:3.9')
 def scan_directory_op(
-    base_path: InputPath("Directory"),
     pattern: str = "**/promptfooconfig.yaml"
-) -> NamedTuple("Outputs", [("config_paths", List[str])]):
-    """Scan directory for promptfoo configuration files.
-    
-    Args:
-        base_path: Base directory to start scanning from
-        pattern: Glob pattern to match config files
-    
-    Returns:
-        NamedTuple containing list of found configuration file paths
-    """
+) -> List:
     import glob
     import os
     from collections import namedtuple
-    
-    # Find all promptfoo config files
-    config_files = glob.glob(os.path.join(base_path, pattern), recursive=True)
-    
-    # Create named tuple for output
-    outputs = namedtuple("Outputs", ["config_paths"])
-    return outputs(config_paths=config_files)
 
-@dsl.component(
-    base_image=CONTAINER_IMAGE,
-    packages_to_install=["pyyaml"]
-)
-def run_promptfoo_tests(
-    config_path: str,
-    output_file: OutputPath("JsonFile"),
-    timeout: int = 3600
-) -> NamedTuple("Outputs", [
-    ("passed", bool),
-    ("total_tests", int),
-    ("failed_tests", int)
-]):
+    config_files = glob.glob(os.path.join("/prompts", pattern), recursive=True)
+    pairs = [{"config_path": c, "result_path": os.path.join(os.path.dirname(c), "result.html")} for c in config_files]
+
+    return pairs
+
+@dsl.container_component
+def run_promptfoo_tests(config_path: str, output_path: str):
+    return dsl.ContainerSpec(image=CONTAINER_IMAGE, command=["promptfoo", "eval", "--config", config_path, "--output", output_path])#, args=[name])
+
+
+@component(base_image='python:3.9', packages_to_install=["pyyaml"])
+def process_test_output(
+    result_path: str,
+    test_results: Output[HTML],
+):
     """Execute promptfoo tests for a given configuration.
     
     Args:
@@ -97,33 +95,13 @@ def run_promptfoo_tests(
     import subprocess
     import os
     from collections import namedtuple
-    
-    try:
-        # Run promptfoo tests
-        result = subprocess.run(
-            ["promptfoo", "eval", "--config", config_path, "--output", output_file],
-            capture_output=True,
-            text=True,
-            timeout=timeout
-        )
-        
-        # Parse results
-        with open(output_file, 'r') as f:
-            test_results = json.load(f)
-        
-        total_tests = len(test_results.get("results", []))
-        failed_tests = sum(1 for r in test_results.get("results", []) 
-                          if not r.get("pass", False))
-        passed = failed_tests == 0
-        
-    except subprocess.TimeoutExpired:
-        raise RuntimeError(f"Tests timed out after {timeout} seconds")
-    except Exception as e:
-        raise RuntimeError(f"Test execution failed: {str(e)}")
-    
-    # Create named tuple for output
-    outputs = namedtuple("Outputs", ["passed", "total_tests", "failed_tests"])
-    return outputs(passed=passed, total_tests=total_tests, failed_tests=failed_tests)
+
+    # Run promptfoo tests
+    with open(result_path, 'r') as f:
+        test_results_content = result_path.read()
+
+    with open(test_results.path, 'w') as dest:
+        dest.write(test_results_content)
 
 @dsl.pipeline(
     name="Promptfoo Testing Pipeline",
@@ -132,8 +110,9 @@ def run_promptfoo_tests(
 def promptfoo_test_pipeline(
     repo_url: str,
     branch: str = "main",
-    test_timeout: int = 3600
+    workspace_pvc: str = "canopy-workspace-pvc",
 ):
+    import os
     """Pipeline that clones a repository and runs promptfoo tests.
     
     Args:
@@ -144,23 +123,78 @@ def promptfoo_test_pipeline(
     
     # Clone repository
     clone_task = git_clone_op(repo_url=repo_url, branch=branch)
+    kubernetes.mount_pvc(
+        clone_task,
+        pvc_name=workspace_pvc,
+        mount_path='/prompts',
+    )
     
     # Scan for config files
-    scan_task = scan_directory_op(
-        base_path=clone_task.outputs["repo_path"]
+    scan_task = scan_directory_op()
+    scan_task.after(clone_task)
+    kubernetes.mount_pvc(
+        scan_task,
+        pvc_name=workspace_pvc,
+        mount_path='/prompts',
     )
     
     # Run tests for each config file found
-    with dsl.ParallelFor(scan_task.outputs["config_paths"]) as config_path:
+    with dsl.ParallelFor(scan_task.output) as pair:
         test_task = run_promptfoo_tests(
-            config_path=config_path,
-            timeout=test_timeout
+            config_path=pair.config_path,
+            output_path=pair.result_path
         )
 
-if __name__ == "__main__":
-    # Compile the pipeline
-    from kfp.compiler import Compiler
-    Compiler().compile(
-        pipeline_func=promptfoo_test_pipeline,
-        package_path="promptfoo_test_pipeline.yaml"
+        kubernetes.mount_pvc(
+            test_task,
+            pvc_name=workspace_pvc,
+            mount_path='/prompts',
+        )
+
+        process_output_task = process_test_output(
+            result_path=pair.result_path
+        )
+        process_output_task.after(test_task)
+
+        kubernetes.mount_pvc(
+            process_output_task,
+            pvc_name=workspace_pvc,
+            mount_path='/prompts',
+        )
+
+
+if __name__ == '__main__':
+    arguments = {
+        "repo_url": "",
+        "branch": "main",
+        "workspace_pvc": "canopy-workspace-pvc",
+    }
+        
+    namespace_file_path =\
+        '/var/run/secrets/kubernetes.io/serviceaccount/namespace'
+    with open(namespace_file_path, 'r') as namespace_file:
+        namespace = namespace_file.read()
+
+    kubeflow_endpoint =\
+        f'https://ds-pipeline-dspa.{namespace}.svc:8443'
+
+    sa_token_file_path = '/var/run/secrets/kubernetes.io/serviceaccount/token'
+    with open(sa_token_file_path, 'r') as token_file:
+        bearer_token = token_file.read()
+
+    ssl_ca_cert =\
+        '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
+
+    print(f'Connecting to Data Science Pipelines: {kubeflow_endpoint}')
+    client = kfp.Client(
+        host=kubeflow_endpoint,
+        existing_token=bearer_token,
+        ssl_ca_cert=ssl_ca_cert
+    )
+
+    client.create_run_from_pipeline_func(
+        promptfoo_test_pipeline,
+        arguments=arguments,
+        experiment_name="kfp-training-pipeline",
+        enable_caching=True
     )
