@@ -9,10 +9,14 @@ This pipeline implements an automated testing workflow that:
 
 import kfp
 from typing import NamedTuple, Optional, List
-from kfp import dsl
+from kfp import dsl, components
 from kfp.dsl import (
     component,
+    Input,
     Output,
+    Dataset,
+    Metrics,
+    Artifact,
     HTML,
 )
 from kfp import kubernetes
@@ -44,6 +48,16 @@ def git_clone_op(
     """
     import os
     import subprocess
+    import shutil
+
+    folder = "/prompts"
+
+    for entry in os.listdir(folder):
+        path = os.path.join(folder, entry)
+        if os.path.isfile(path) or os.path.islink(path):
+            os.unlink(path)
+        elif os.path.isdir(path):
+            shutil.rmtree(path)
     
     # Clone the repository
     subprocess.run([
@@ -71,12 +85,16 @@ def scan_directory_op(
 
     return pairs
 
-@dsl.container_component
+# @dsl.container_component
+# def run_promptfoo_tests(config_path: str, output_path: str):
+#     return dsl.ContainerSpec(image=CONTAINER_IMAGE, command=["promptfoo", "eval", "--config", config_path, "--output", output_path])#, args=[name])
+
+@component(base_image='python:3.9')
 def run_promptfoo_tests(config_path: str, output_path: str):
-    return dsl.ContainerSpec(image=CONTAINER_IMAGE, command=["promptfoo", "eval", "--config", config_path, "--output", output_path])#, args=[name])
+    print("test")
 
 
-@component(base_image='python:3.9', packages_to_install=["pyyaml"])
+@component(base_image='python:3.9')
 def process_test_output(
     result_path: str,
     test_results: Output[HTML],
@@ -145,11 +163,11 @@ def promptfoo_test_pipeline(
             output_path=pair.result_path
         )
 
-        kubernetes.mount_pvc(
-            test_task,
-            pvc_name=workspace_pvc,
-            mount_path='/prompts',
-        )
+        # kubernetes.mount_pvc(
+        #     test_task,
+        #     pvc_name=workspace_pvc,
+        #     mount_path='/prompts',
+        # )
 
         process_output_task = process_test_output(
             result_path=pair.result_path
@@ -165,7 +183,7 @@ def promptfoo_test_pipeline(
 
 if __name__ == '__main__':
     arguments = {
-        "repo_url": "",
+        "repo_url": "https://github.com/rhoai-genaiops/canopy-prompts",
         "branch": "main",
         "workspace_pvc": "canopy-workspace-pvc",
     }
@@ -196,5 +214,5 @@ if __name__ == '__main__':
         promptfoo_test_pipeline,
         arguments=arguments,
         experiment_name="kfp-training-pipeline",
-        enable_caching=True
+        enable_caching=False
     )
