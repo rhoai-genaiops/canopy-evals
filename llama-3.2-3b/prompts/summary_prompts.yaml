@@ -1,0 +1,19 @@
+name: summarize
+description: Prompts for summarizing text using Llama 3.2 3B model.
+prompts:
+  - name: summary
+    prompt: |
+      Summarize the following text in a concise manner:
+      {text}
+    examples:
+      - text: "Llama 3.2 is a state-of-the-art language model that excels in various natural language processing tasks, including summarization, translation, and question answering."
+        expected_result: "Llama 3.2 is a top-tier language model for NLP tasks."
+      - test_file: tests/summary_tests.yaml
+
+  - name: generate_brief_summary
+    prompt: |
+      Please generate a brief summary of the text below:
+      {text}
+    examples:
+      - text: "The advancements in AI technology have led to significant improvements in machine learning algorithms, enabling more accurate predictions and better decision-making processes."
+        expected_result: "AI advancements enhance machine learning accuracy and decision-making."
