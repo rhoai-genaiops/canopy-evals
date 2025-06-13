@@ -1,9 +1,5 @@
-name: summarize
+name: summary_prompt
 description: Tests for the summary prompts of the Llama 3.2 3B model.
 examples:
-  - name: summary
-    text: "Llama 3.2 is a state-of-the-art language model that excels in various natural language processing tasks, including summarization, translation, and question answering."
+  - text: "Llama 3.2 is a state-of-the-art language model that excels in various natural language processing tasks, including summarization, translation, and question answering."
     expected_result: "Llama 3.2 is a top-tier language model for NLP tasks."
-  - name: generate_brief_summary
-    text: "The advancements in AI technology have led to significant improvements in machine learning algorithms, enabling more accurate predictions and better decision-making processes."
-    expected_result: "AI advancements enhance machine learning accuracy and decision-making."

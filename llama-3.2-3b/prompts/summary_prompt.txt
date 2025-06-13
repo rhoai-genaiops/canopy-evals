@@ -1,0 +1,2 @@
+Summarize the following text in a concise manner:
+{text}
