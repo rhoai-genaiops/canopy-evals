@@ -1,0 +1,26 @@
+prompts:
+  - 'Convert this English to {{language}}: {{input}}'
+  - 'Translate to {{language}}: {{input}}'
+providers:
+  - id: https
+    config:
+      url: 'http://llama32-predictor.genaiops-playground.svc.cluster.local/v1/completions'
+      method: 'POST'
+      headers:
+        'Content-Type': 'application/json'
+      body:
+        prompt: '{{prompt}}'
+      transformResponse: 'json.choices[0].text'
+defaultTest:
+  assert:
+    - type: javascript
+      value: Math.max(0, Math.min(1, 1 - (output.length - 100) / 900));
+    - type: latency
+      threshold: 200
+tests:
+  - vars:
+      language: French
+      input: Hello world
+  - vars:
+      language: Spanish
+      input: Where is the library?

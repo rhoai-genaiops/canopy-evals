@@ -1,0 +1,19 @@
+FROM registry.access.redhat.com/ubi9/ubi
+
+# Enable NodeSource Node.js 20 repo
+RUN curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - \
+ && dnf install -y nodejs \
+    python3 \
+    make \
+    gcc \
+    g++ \
+ && dnf clean all
+
+# Install promptfoo globally
+RUN npm install -g promptfoo
+
+# Create working directory
+WORKDIR /app
+
+# Default command
+CMD ["promptfoo", "--help"]
