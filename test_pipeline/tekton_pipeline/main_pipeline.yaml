@@ -1,0 +1,43 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: main-pipeline
+spec:
+  workspaces:
+    - name: shared-data
+  params:
+    - name: repo-url
+    - name: branch
+  tasks:
+    - name: git-clone
+      taskRef:
+        name: git-clone
+      params:
+        - name: repo-url
+          value: $(params.repo-url)
+        - name: branch
+          value: $(params.branch)
+      workspaces:
+        - name: output
+          workspace: shared-data
+
+    - name: scan-configs
+      runAfter:
+        - git-clone
+      taskRef:
+        name: scan-configs
+      workspaces:
+        - name: source
+          workspace: shared-data
+
+    - name: fanout-controller
+      runAfter:
+        - scan-configs
+      taskRef:
+        name: fanout-controller
+      params:
+        - name: config-list
+          value: $(tasks.scan-configs.results.config-list)
+      workspaces:
+        - name: source
+          workspace: shared-data

@@ -1,19 +1,23 @@
 FROM registry.access.redhat.com/ubi9/ubi
 
-# Enable NodeSource Node.js 20 repo
+# Install Node.js 20 and Python 3 with build tools
 RUN curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - \
- && dnf install -y nodejs \
+ && dnf install -y \
+    nodejs \
     python3 \
+    python3-pip \
     make \
     gcc \
     g++ \
  && dnf clean all
 
-# Install promptfoo globally
+# Install promptfoo
 RUN npm install -g promptfoo
 
-# Create working directory
+# Set working directory
 WORKDIR /app
 
-# Default command
-CMD ["promptfoo", "--help"]
+ENV HOME=/tmp
+
+# Set default command (optional)
+CMD ["python3"]

@@ -1,5 +1,5 @@
 prompts:
-  - file://../prompts/summary_prompt.txt
+  - file://prompts.txt
 providers:
   - id: https
     config:

@@ -23,14 +23,6 @@ from kfp import kubernetes
 from typing import NamedTuple, List
 from dataclasses import dataclass
 
-@dataclass
-class ConfigPair:
-    config_path: str
-    result_path: str
-
-# Define the container image from our Containerfile
-CONTAINER_IMAGE = "quay.io/rlundber/promptfoo:0.1"
-
 @component(base_image='python:3.9')
 def git_clone_op(
     repo_url: str,
@@ -72,54 +64,49 @@ def git_clone_op(
     for item in os.listdir("/prompts"):
         print(item)
 
-@component(base_image='python:3.9')
+@component(base_image="python:3.9")
 def scan_directory_op(
     pattern: str = "**/promptfooconfig.yaml"
-) -> List:
+) -> NamedTuple("Output", [("configs", List[dict[str, str]])]):
     import glob
     import os
+
+    configs = []
+    for path in glob.glob(os.path.join("/prompts", pattern), recursive=True):
+        with open(path, "r") as f:
+            configs.append({"name": path, "content": f.read()})
+
     from collections import namedtuple
-
-    config_files = glob.glob(os.path.join("/prompts", pattern), recursive=True)
-    pairs = [{"config_path": c, "result_path": os.path.join(os.path.dirname(c), "result.html")} for c in config_files]
-
-    return pairs
-
-# @dsl.container_component
-# def run_promptfoo_tests(config_path: str, output_path: str):
-#     return dsl.ContainerSpec(image=CONTAINER_IMAGE, command=["promptfoo", "eval", "--config", config_path, "--output", output_path])#, args=[name])
-
-@component(base_image='python:3.9')
-def run_promptfoo_tests(config_path: str, output_path: str):
-    print("test")
+    Output = namedtuple("Output", ["configs"])
+    print("configs: ", configs)
+    return Output(configs=configs)
 
 
-@component(base_image='python:3.9')
-def process_test_output(
-    result_path: str,
-    test_results: Output[HTML],
+
+@component(base_image="quay.io/rlundber/promptfoo:0.3")
+def run_promptfoo_tests_from_config(
+    config_json: str,
+    output_html: Output[HTML],
 ):
-    """Execute promptfoo tests for a given configuration.
-    
-    Args:
-        config_path: Path to promptfoo configuration file
-        output_file: Path where test results will be saved
-        timeout: Maximum time in seconds to wait for tests
-    
-    Returns:
-        NamedTuple containing test execution results
-    """
     import json
     import subprocess
-    import os
-    from collections import namedtuple
+    import tempfile
 
-    # Run promptfoo tests
-    with open(result_path, 'r') as f:
-        test_results_content = result_path.read()
+    # Write config to temp file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".yaml", mode="w") as f:
+        config_path = f.name
+        f.write(config_json)
 
-    with open(test_results.path, 'w') as dest:
-        dest.write(test_results_content)
+    # Run promptfoo
+    result = subprocess.run(
+        ["promptfoo", "eval", "--config", config_path, "--output", output_html.path],
+        capture_output=True,
+        text=True
+    )
+
+    print("STDOUT:", result.stdout)
+    print("STDERR:", result.stderr)
+
 
 @dsl.pipeline(
     name="Promptfoo Testing Pipeline",
@@ -130,24 +117,15 @@ def promptfoo_test_pipeline(
     branch: str = "main",
     workspace_pvc: str = "canopy-workspace-pvc",
 ):
-    import os
-    """Pipeline that clones a repository and runs promptfoo tests.
-    
-    Args:
-        repo_url: URL of the git repository to test
-        branch: Git branch to test (default: main)
-        test_timeout: Maximum time in seconds for test execution
-    """
-    
-    # Clone repository
+    # Step 1: Clone repo
     clone_task = git_clone_op(repo_url=repo_url, branch=branch)
     kubernetes.mount_pvc(
         clone_task,
         pvc_name=workspace_pvc,
         mount_path='/prompts',
     )
-    
-    # Scan for config files
+
+    # Step 2: Scan for promptfoo configs
     scan_task = scan_directory_op()
     scan_task.after(clone_task)
     kubernetes.mount_pvc(
@@ -155,30 +133,11 @@ def promptfoo_test_pipeline(
         pvc_name=workspace_pvc,
         mount_path='/prompts',
     )
-    
-    # Run tests for each config file found
-    with dsl.ParallelFor(scan_task.output) as pair:
-        test_task = run_promptfoo_tests(
-            config_path=pair.config_path,
-            output_path=pair.result_path
-        )
 
-        # kubernetes.mount_pvc(
-        #     test_task,
-        #     pvc_name=workspace_pvc,
-        #     mount_path='/prompts',
-        # )
+    # Step 3: Run promptfoo tests for each config
+    with dsl.ParallelFor(scan_task.output) as config:
+        run_promptfoo_tests_from_config(config_json=config.content)
 
-        process_output_task = process_test_output(
-            result_path=pair.result_path
-        )
-        process_output_task.after(test_task)
-
-        kubernetes.mount_pvc(
-            process_output_task,
-            pvc_name=workspace_pvc,
-            mount_path='/prompts',
-        )
 
 
 if __name__ == '__main__':

@@ -1,0 +1,33 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: fanout-controller
+spec:
+  workspaces:
+    - name: source
+  params:
+    - name: config-list
+  steps:
+    - name: create-runs
+      image: bitnami/kubectl:latest
+      script: |
+        IFS=',' read -ra CONFIGS <<< "$(params.config-list)"
+        for CONFIG in "${CONFIGS[@]}"; do
+          NAME=$(echo $CONFIG | sha256sum | cut -c1-8)
+          cat <<EOF | kubectl apply -f -
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: run-config-$NAME-
+spec:
+  pipelineRef:
+    name: run-config-pipeline
+  workspaces:
+    - name: shared-data
+      persistentVolumeClaim:
+        claimName: shared-workspace-pvc
+  params:
+    - name: config-path
+      value: "$CONFIG"
+    - name: result-path
+      value: "$(dirname $CONFIG)/result.html"

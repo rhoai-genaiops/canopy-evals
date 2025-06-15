@@ -1,0 +1,22 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: run-config-pipeline
+spec:
+  workspaces:
+    - name: shared-data
+  params:
+    - name: config-path
+    - name: result-path
+  tasks:
+    - name: run-tests
+      taskRef:
+        name: run-promptfoo
+      params:
+        - name: config-path
+          value: $(params.config-path)
+        - name: result-path
+          value: $(params.result-path)
+      workspaces:
+        - name: source
+          workspace: shared-data
