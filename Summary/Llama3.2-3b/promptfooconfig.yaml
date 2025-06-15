@@ -3,7 +3,7 @@ prompts:
 providers:
   - id: https
     config:
-      url: 'http://llama32-predictor.genaiops-playground.svc.cluster.local/v1/completions'
+      url: 'http://llama32-predictor.genaiops-playground.svc.cluster.local:8080/v1/completions'
       method: 'POST'
       headers:
         'Content-Type': 'application/json'
