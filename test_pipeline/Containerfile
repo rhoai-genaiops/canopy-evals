@@ -7,6 +7,7 @@ RUN curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - \
     python3 \
     python3-pip \
     make \
+    git \
     gcc \
     g++ \
  && dnf clean all
