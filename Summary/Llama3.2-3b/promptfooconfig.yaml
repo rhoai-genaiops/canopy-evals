@@ -1,6 +1,5 @@
 prompts:
-  - "Summarize the following text in a concise manner: {{text}}"
-  # - file://prompts.txt
+  - file://prompts.txt
 providers:
   - id: https
     config:
