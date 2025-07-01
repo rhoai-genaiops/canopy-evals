@@ -65,21 +65,27 @@ def git_clone_op(
         print(item)
 
 @component(base_image="python:3.9")
-def scan_directory_op(
-    pattern: str = "**/promptfooconfig.yaml"
-) -> NamedTuple("Output", [("configs", List[dict])]):
+def scan_directory_op() -> NamedTuple("Output", [("promptfoo_configs", List[dict]), ("llamastack_configs", List[dict])]):
     import glob
     import os
 
-    configs = []
+    promptfoo_configs = []
+    llamastack_configs = []
     base = "/prompts"
-    for path in glob.glob(os.path.join(base, pattern), recursive=True):
+    
+    # Scan for promptfoo configs
+    for path in glob.glob(os.path.join(base, "**/promptfooconfig.yaml"), recursive=True):
         rel_path = os.path.relpath(path, base)
-        configs.append({"config_path": rel_path})
+        promptfoo_configs.append({"config_path": rel_path})
+    
+    # Scan for llamastack configs
+    for path in glob.glob(os.path.join(base, "**/summary_tests.yaml"), recursive=True):
+        rel_path = os.path.relpath(path, base)
+        llamastack_configs.append({"config_path": rel_path})
 
     from collections import namedtuple
-    Output = namedtuple("Output", ["configs"])
-    return Output(configs=configs)
+    Output = namedtuple("Output", ["promptfoo_configs", "llamastack_configs"])
+    return Output(promptfoo_configs=promptfoo_configs, llamastack_configs=llamastack_configs)
 
 
 
@@ -122,6 +128,79 @@ def run_promptfoo_tests_from_config(
         shutil.copy(output_path, output_html.path)
 
 
+@component(base_image="python:3.9")
+def run_llamastack_tests_from_config(
+    config_path: str,          # e.g., "Summary/Llama3.2-3b/summary_tests.yaml"
+    repo_url: str,
+    branch: str,
+    output_html: Output[HTML],
+):
+    """Run llamastack-based tests from a summary_tests.yaml configuration file."""
+    import os
+    import subprocess
+    import shutil
+    import tempfile
+    import yaml
+    import json
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        repo_dir = os.path.join(tmpdir, "repo")
+
+        # Clone the repo
+        subprocess.run([
+            "git", "clone", "--branch", branch,
+            "--single-branch", "--depth", "1",
+            repo_url, repo_dir
+        ], check=True)
+
+        full_config_path = os.path.join(repo_dir, config_path)
+        output_path = os.path.join(tmpdir, "result.html")
+
+        # Load the summary_tests.yaml configuration
+        with open(full_config_path, 'r') as f:
+            config = yaml.safe_load(f)
+
+        # For now, create a placeholder HTML output with config details
+        # This can be extended to integrate with actual llamastack evaluation
+        with open(output_path, "w") as f:
+            f.write(f"""<html>
+            <head><title>Llamastack Test Results</title></head>
+            <body>
+                <h1>Llamastack Test Results</h1>
+                <h2>Configuration: {config_path}</h2>
+                <h3>Test Details:</h3>
+                <ul>
+                    <li><strong>Name:</strong> {config.get('name', 'N/A')}</li>
+                    <li><strong>Description:</strong> {config.get('description', 'N/A')}</li>
+                    <li><strong>Model:</strong> {config.get('model', 'N/A')}</li>
+                    <li><strong>Endpoint:</strong> {config.get('endpoint', 'N/A')}</li>
+                    <li><strong>Number of Tests:</strong> {len(config.get('tests', []))}</li>
+                </ul>
+                <h3>Tests:</h3>
+                <table border="1">
+                    <tr><th>Test Text</th><th>Expected Result</th></tr>
+            """)
+            
+            for test in config.get('tests', []):
+                f.write(f"""
+                    <tr>
+                        <td>{test.get('text', 'N/A')}</td>
+                        <td>{test.get('expected_result', 'N/A')}</td>
+                    </tr>
+                """)
+            
+            f.write("""
+                </table>
+                <p><em>Note: This is a placeholder implementation. 
+                Actual llamastack evaluation integration to be implemented.</em></p>
+            </body>
+            </html>""")
+
+        print(f"Processed llamastack test config: {config_path}")
+        print(f"Config details: {json.dumps(config, indent=2)}")
+        
+        shutil.copy(output_path, output_html.path)
+
 
 @dsl.pipeline(
     name="Promptfoo Testing Pipeline",
@@ -140,7 +219,7 @@ def promptfoo_test_pipeline(
         mount_path='/prompts',
     )
 
-    # Step 2: Scan for promptfoo configs
+    # Step 2: Scan for all test configs
     scan_task = scan_directory_op()
     scan_task.after(clone_task)
     kubernetes.mount_pvc(
@@ -149,9 +228,17 @@ def promptfoo_test_pipeline(
         mount_path='/prompts',
     )
 
-    # Step 3: Run promptfoo tests for each config
-    with dsl.ParallelFor(scan_task.output) as config:
+    # Step 3: Run promptfoo tests for each promptfoo config
+    with dsl.ParallelFor(scan_task.outputs["promptfoo_configs"]) as config:
         run_promptfoo_tests_from_config(
+            config_path=config.config_path,
+            repo_url=repo_url,
+            branch=branch
+        )
+
+    # Step 4: Run llamastack tests for each llamastack config
+    with dsl.ParallelFor(scan_task.outputs["llamastack_configs"]) as config:
+        run_llamastack_tests_from_config(
             config_path=config.config_path,
             repo_url=repo_url,
             branch=branch
