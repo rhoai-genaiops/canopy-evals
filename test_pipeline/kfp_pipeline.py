@@ -73,13 +73,8 @@ def scan_directory_op() -> NamedTuple("Output", [("promptfoo_configs", List[dict
     llamastack_configs = []
     base = "/prompts"
     
-    # Scan for promptfoo configs
-    for path in glob.glob(os.path.join(base, "**/promptfooconfig.yaml"), recursive=True):
-        rel_path = os.path.relpath(path, base)
-        promptfoo_configs.append({"config_path": rel_path})
-    
     # Scan for llamastack configs
-    for path in glob.glob(os.path.join(base, "**/summary_tests.yaml"), recursive=True):
+    for path in glob.glob(os.path.join(base, "**/**_tests.yaml"), recursive=True):
         rel_path = os.path.relpath(path, base)
         llamastack_configs.append({"config_path": rel_path})
 
@@ -89,50 +84,13 @@ def scan_directory_op() -> NamedTuple("Output", [("promptfoo_configs", List[dict
 
 
 
-@component(base_image="quay.io/rlundber/promptfoo:0.4")
-def run_promptfoo_tests_from_config(
-    config_path: str,          # e.g., "tests/foo/promptfooconfig.yaml"
-    repo_url: str,
-    branch: str,
-    output_html: Output[HTML],
-):
-    import os
-    import subprocess
-    import shutil
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        repo_dir = os.path.join(tmpdir, "repo")
-
-        # Clone the repo
-        subprocess.run([
-            "git", "clone", "--branch", branch,
-            "--single-branch", "--depth", "1",
-            repo_url, repo_dir
-        ], check=True)
-
-        full_config_path = os.path.join(repo_dir, config_path)
-        output_path = os.path.join(tmpdir, "result.html")
-
-        # Run promptfoo
-        result = subprocess.run(
-            ["promptfoo", "eval", "--config", full_config_path, "--output", output_path],
-            capture_output=True,
-            text=True,
-            env={**os.environ, "HOME": "/tmp"},
-        )
-
-        print("STDOUT:", result.stdout)
-        print("STDERR:", result.stderr)
-
-        shutil.copy(output_path, output_html.path)
-
-
-@component(base_image="python:3.9")
+@component(base_image="python:3.9", packages_to_install=["git+https://github.com/meta-llama/llama-stack.git@release-0.2.12"])
 def run_llamastack_tests_from_config(
     config_path: str,          # e.g., "Summary/Llama3.2-3b/summary_tests.yaml"
     repo_url: str,
     branch: str,
+    base_url: str,
+    backend_url: str,
     output_html: Output[HTML],
 ):
     """Run llamastack-based tests from a summary_tests.yaml configuration file."""
@@ -142,6 +100,51 @@ def run_llamastack_tests_from_config(
     import tempfile
     import yaml
     import json
+    from llama_stack_client import LlamaStackClient
+    from types import SimpleNamespace
+    from urllib.parse import urljoin
+    import requests
+
+    lls_client = LlamaStackClient(
+        base_url=base_url,
+        timeout=600.0 # Default is 1 min which is far too little for some agentic tests, we set it to 10 min
+    )
+
+    def replace_txt_files(obj, base_path="."):
+        if isinstance(obj, dict):
+            return {k: replace_txt_files(v, base_path) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [replace_txt_files(item, base_path) for item in obj]
+        elif isinstance(obj, str) and obj.endswith(".txt"):
+            file_path = os.path.join(base_path, obj)
+            with open(file_path, "r", encoding="utf-8") as f:
+                return f.read()
+        else:
+            return obj
+
+    def send_request(payload, url):
+        import httpx
+        full_response = ""
+
+        with httpx.Client(timeout=None) as client:
+            with client.stream("POST", url, json=payload) as response:
+                for line in response.iter_lines():
+                    if line.startswith("data: "):
+                        try:
+                            data = json.loads(line[len("data: "):])
+                            full_response += data.get("delta", "")
+                        except json.JSONDecodeError:
+                            continue
+
+        return full_response
+
+    def prompt_backend(prompt, backend_url, test_endpoint):
+        url = urljoin(backend_url, test_endpoint)
+        payload = {
+            "prompt": prompt
+        }
+        return send_request(payload, url)
+
 
     with tempfile.TemporaryDirectory() as tmpdir:
         repo_dir = os.path.join(tmpdir, "repo")
@@ -160,42 +163,29 @@ def run_llamastack_tests_from_config(
         with open(full_config_path, 'r') as f:
             config = yaml.safe_load(f)
 
-        # For now, create a placeholder HTML output with config details
-        # This can be extended to integrate with actual llamastack evaluation
-        with open(output_path, "w") as f:
-            f.write(f"""<html>
-            <head><title>Llamastack Test Results</title></head>
-            <body>
-                <h1>Llamastack Test Results</h1>
-                <h2>Configuration: {config_path}</h2>
-                <h3>Test Details:</h3>
-                <ul>
-                    <li><strong>Name:</strong> {config.get('name', 'N/A')}</li>
-                    <li><strong>Description:</strong> {config.get('description', 'N/A')}</li>
-                    <li><strong>Model:</strong> {config.get('model', 'N/A')}</li>
-                    <li><strong>Endpoint:</strong> {config.get('endpoint', 'N/A')}</li>
-                    <li><strong>Number of Tests:</strong> {len(config.get('tests', []))}</li>
-                </ul>
-                <h3>Tests:</h3>
-                <table border="1">
-                    <tr><th>Test Text</th><th>Expected Result</th></tr>
-            """)
-            
-            for test in config.get('tests', []):
-                f.write(f"""
-                    <tr>
-                        <td>{test.get('text', 'N/A')}</td>
-                        <td>{test.get('expected_result', 'N/A')}</td>
-                    </tr>
-                """)
-            
-            f.write("""
-                </table>
-                <p><em>Note: This is a placeholder implementation. 
-                Actual llamastack evaluation integration to be implemented.</em></p>
-            </body>
-            </html>""")
+        test_endpoint = config["endpoint"]
 
+        scoring_params = config["scoring_params"]
+        scoring_params = replace_txt_files(scoring_params)
+
+        eval_rows = []
+        for test in config["tests"]:
+            if "dataset" in test:
+                pass
+            else:
+                prompt = test["prompt"]
+                eval_rows.append(
+                    {
+                        "input_query": prompt,
+                        "generated_answer": prompt_backend(prompt, backend_url, test_endpoint),
+                        "expected_answer": test["expected_result"],
+                    }
+                )
+
+        scoring_response = client.scoring.score(
+            input_rows=eval_rows, scoring_functions=scoring_params
+        )
+        
         print(f"Processed llamastack test config: {config_path}")
         print(f"Config details: {json.dumps(config, indent=2)}")
         
@@ -210,6 +200,8 @@ def promptfoo_test_pipeline(
     repo_url: str,
     branch: str = "main",
     workspace_pvc: str = "canopy-workspace-pvc",
+    base_url: str = "",
+    backend_url: str = "",
 ):
     # Step 1: Clone repo
     clone_task = git_clone_op(repo_url=repo_url, branch=branch)
@@ -228,20 +220,14 @@ def promptfoo_test_pipeline(
         mount_path='/prompts',
     )
 
-    # Step 3: Run promptfoo tests for each promptfoo config
-    with dsl.ParallelFor(scan_task.outputs["promptfoo_configs"]) as config:
-        run_promptfoo_tests_from_config(
-            config_path=config.config_path,
-            repo_url=repo_url,
-            branch=branch
-        )
-
     # Step 4: Run llamastack tests for each llamastack config
     with dsl.ParallelFor(scan_task.outputs["llamastack_configs"]) as config:
         run_llamastack_tests_from_config(
             config_path=config.config_path,
             repo_url=repo_url,
-            branch=branch
+            branch=branch,
+            base_url=base_url,
+            backend_url=backend_url,
         )
 
 
@@ -250,6 +236,8 @@ if __name__ == '__main__':
         "repo_url": "https://github.com/rhoai-genaiops/canopy-prompts",
         "branch": "main",
         "workspace_pvc": "canopy-workspace-pvc",
+        "base_url": "http://llamastack-server-genaiops-playground.apps.dev.rhoai.rh-aiservices-bu.com",
+        "backend_url": "https://canopy-backend-genaiops-playground.apps.dev.rhoai.rh-aiservices-bu.com",
     }
         
     namespace_file_path =\
