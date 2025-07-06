@@ -18,6 +18,7 @@ from kfp.dsl import (
     Metrics,
     Artifact,
     HTML,
+    Markdown
 )
 from kfp import kubernetes
 from typing import NamedTuple, List
@@ -84,14 +85,14 @@ def scan_directory_op() -> NamedTuple("Output", [("promptfoo_configs", List[dict
 
 
 
-@component(base_image="python:3.9", packages_to_install=["git+https://github.com/meta-llama/llama-stack.git@release-0.2.12"])
+@component(base_image="python:3.11", packages_to_install=["git+https://github.com/meta-llama/llama-stack.git@release-0.2.12"])
 def run_llamastack_tests_from_config(
     config_path: str,          # e.g., "Summary/Llama3.2-3b/summary_tests.yaml"
     repo_url: str,
     branch: str,
     base_url: str,
     backend_url: str,
-    output_html: Output[HTML],
+    output_markdown: Output[Markdown],
 ):
     """Run llamastack-based tests from a summary_tests.yaml configuration file."""
     import os
@@ -166,7 +167,7 @@ def run_llamastack_tests_from_config(
         test_endpoint = config["endpoint"]
 
         scoring_params = config["scoring_params"]
-        scoring_params = replace_txt_files(scoring_params)
+        scoring_params = replace_txt_files(scoring_params, os.path.dirname(full_config_path))
 
         eval_rows = []
         for test in config["tests"]:
@@ -182,14 +183,89 @@ def run_llamastack_tests_from_config(
                     }
                 )
 
-        scoring_response = client.scoring.score(
+        scoring_response = lls_client.scoring.score(
             input_rows=eval_rows, scoring_functions=scoring_params
         )
         
-        print(f"Processed llamastack test config: {config_path}")
-        print(f"Config details: {json.dumps(config, indent=2)}")
+        # Generate markdown summary
+        def generate_markdown_summary(scoring_response, config_path):
+            markdown_lines = []
+            markdown_lines.append(f"# Test Results Summary")
+            markdown_lines.append(f"**Config Path:** `{config_path}`")
+            markdown_lines.append("")
+            
+            for scoring_function_name, result in scoring_response.results.items():
+                markdown_lines.append(f"## {scoring_function_name}")
+                markdown_lines.append("")
+                
+                if hasattr(result, 'score_rows') and result.score_rows:
+                    # Count scores
+                    score_counts = {}
+                    for row in result.score_rows:
+                        score = row.get('score', 'Unknown')
+                        score_counts[score] = score_counts.get(score, 0) + 1
+                    
+                    # Add summary statistics
+                    total_tests = len(result.score_rows)
+                    markdown_lines.append(f"**Total Tests:** {total_tests}")
+                    markdown_lines.append("")
+                    
+                    # Score distribution
+                    markdown_lines.append("### Score Distribution")
+                    for score, count in sorted(score_counts.items()):
+                        percentage = (count / total_tests) * 100
+                        markdown_lines.append(f"- **{score}**: {count} ({percentage:.1f}%)")
+                    markdown_lines.append("")
+                    
+                    # Detailed results
+                    markdown_lines.append("### Detailed Results")
+                    for i, row in enumerate(result.score_rows, 1):
+                        score = row.get('score', 'Unknown')
+                        feedback = row.get('judge_feedback', 'No feedback provided')
+                        markdown_lines.append(f"#### Test {i}")
+                        markdown_lines.append(f"**Score:** {score}")
+                        markdown_lines.append(f"**Feedback:** {feedback}")
+                        markdown_lines.append("")
+                else:
+                    markdown_lines.append("No detailed results available.")
+                    markdown_lines.append("")
+            
+            return "\n".join(markdown_lines)
         
-        shutil.copy(output_path, output_html.path)
+        markdown_summary = generate_markdown_summary(scoring_response, config_path)
+        
+        # Write markdown summary to HTML output
+        with open(output_path, 'w') as f:
+            f.write(f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Results</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; }}
+        h1, h2, h3 {{ color: #333; }}
+        h1 {{ border-bottom: 2px solid #ddd; }}
+        h2 {{ border-bottom: 1px solid #eee; }}
+        code {{ background-color: #f4f4f4; padding: 2px 4px; border-radius: 3px; }}
+        pre {{ background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }}
+        .score {{ font-weight: bold; color: #007acc; }}
+        .feedback {{ margin-left: 20px; font-style: italic; color: #666; }}
+    </style>
+</head>
+<body>
+    <div id="markdown-content">
+        {markdown_summary.replace(chr(10), '<br>').replace('**', '<strong>').replace('**', '</strong>').replace('`', '<code>').replace('`', '</code>').replace('# ', '<h1>').replace('</h1><br>', '</h1>').replace('## ', '<h2>').replace('</h2><br>', '</h2>').replace('### ', '<h3>').replace('</h3><br>', '</h3>').replace('#### ', '<h4>').replace('</h4><br>', '</h4>').replace('- ', '<li>').replace('<li>', '<ul><li>').replace('</li><br><li>', '</li><li>').replace('</li><br><br>', '</li></ul><br>')}
+    </div>
+</body>
+</html>
+            """)
+        
+        print(f"Processed llamastack test config: {config_path}")
+        print(f"Generated markdown summary with {len(eval_rows)} test results")
+        
+        shutil.copy(output_path, output_markdown.path)
+        
+        return markdown_summary
 
 
 @dsl.pipeline(
