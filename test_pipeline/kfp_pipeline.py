@@ -1,10 +1,10 @@
 """
-Kubeflow Pipeline for Automated Promptfoo Testing
+Kubeflow Pipeline for Automated Canopy Testing
 
 This pipeline implements an automated testing workflow that:
 1. Clones a git repository
-2. Scans directories for promptfoo configuration
-3. Executes promptfoo tests
+2. Scans directories for LLM Test configuration
+3. Executes the LLM tests
 """
 
 import kfp
@@ -66,11 +66,10 @@ def git_clone_op(
         print(item)
 
 @component(base_image="python:3.9")
-def scan_directory_op() -> NamedTuple("Output", [("promptfoo_configs", List[dict]), ("llamastack_configs", List[dict])]):
+def scan_directory_op() -> NamedTuple("Output", [("llamastack_configs", List[dict])]):
     import glob
     import os
 
-    promptfoo_configs = []
     llamastack_configs = []
     base = "/prompts"
     
@@ -80,8 +79,8 @@ def scan_directory_op() -> NamedTuple("Output", [("promptfoo_configs", List[dict
         llamastack_configs.append({"config_path": rel_path})
 
     from collections import namedtuple
-    Output = namedtuple("Output", ["promptfoo_configs", "llamastack_configs"])
-    return Output(promptfoo_configs=promptfoo_configs, llamastack_configs=llamastack_configs)
+    Output = namedtuple("Output", ["llamastack_configs"])
+    return Output(llamastack_configs=llamastack_configs)
 
 
 
@@ -674,10 +673,10 @@ def run_llamastack_tests_from_config(
 
 
 @dsl.pipeline(
-    name="Promptfoo Testing Pipeline",
-    description="Pipeline for running promptfoo tests across repositories"
+    name="Canopy Testing Pipeline",
+    description="Pipeline for running canopy tests across repositories"
 )
-def promptfoo_test_pipeline(
+def canopy_test_pipeline(
     repo_url: str,
     branch: str = "main",
     workspace_pvc: str = "canopy-workspace-pvc",
@@ -744,7 +743,7 @@ if __name__ == '__main__':
     )
 
     client.create_run_from_pipeline_func(
-        promptfoo_test_pipeline,
+        canopy_test_pipeline,
         arguments=arguments,
         experiment_name="kfp-training-pipeline",
         enable_caching=False
