@@ -92,7 +92,7 @@ def run_llamastack_tests_from_config(
     branch: str,
     base_url: str,
     backend_url: str,
-    output_markdown: Output[Markdown],
+    output_results: Output[HTML],
 ):
     """Run llamastack-based tests from a summary_tests.yaml configuration file."""
     import os
@@ -187,85 +187,280 @@ def run_llamastack_tests_from_config(
             input_rows=eval_rows, scoring_functions=scoring_params
         )
         
-        # Generate markdown summary
-        def generate_markdown_summary(scoring_response, config_path):
-            markdown_lines = []
-            markdown_lines.append(f"# Test Results Summary")
-            markdown_lines.append(f"**Config Path:** `{config_path}`")
-            markdown_lines.append("")
+        # Generate HTML summary
+        def generate_html_summary(scoring_response, config_path, eval_rows):
+            html_content = []
+            
+            # Header
+            html_content.append(f'<h1>Test Results</h1>')
+            html_content.append(f'<p class="config-path"><strong>Config Path:</strong> <code>{config_path}</code></p>')
             
             for scoring_function_name, result in scoring_response.results.items():
-                markdown_lines.append(f"## {scoring_function_name}")
-                markdown_lines.append("")
+                html_content.append(f'<h2>{scoring_function_name}</h2>')
+                
+                # Show aggregated results if available
+                if hasattr(result, 'aggregated_results') and result.aggregated_results:
+                    html_content.append('<div class="aggregated-results">')
+                    html_content.append('<h3>Summary</h3>')
+                    for metric_name, metric_data in result.aggregated_results.items():
+                        if isinstance(metric_data, dict):
+                            for key, value in metric_data.items():
+                                html_content.append(f'<p><strong>{key}:</strong> {value}</p>')
+                        else:
+                            html_content.append(f'<p><strong>{metric_name}:</strong> {metric_data}</p>')
+                    html_content.append('</div>')
                 
                 if hasattr(result, 'score_rows') and result.score_rows:
-                    # Count scores
-                    score_counts = {}
-                    for row in result.score_rows:
-                        score = row.get('score', 'Unknown')
-                        score_counts[score] = score_counts.get(score, 0) + 1
+                    # Individual test results
+                    html_content.append('<h3>Test Results</h3>')
+                    html_content.append('<div class="test-results">')
                     
-                    # Add summary statistics
-                    total_tests = len(result.score_rows)
-                    markdown_lines.append(f"**Total Tests:** {total_tests}")
-                    markdown_lines.append("")
+                    for i, (eval_row, score_row) in enumerate(zip(eval_rows, result.score_rows), 1):
+                        html_content.append(f'<div class="test-result">')
+                        html_content.append(f'<h4>Test {i}</h4>')
+                        
+                        # Input
+                        html_content.append('<div class="test-section">')
+                        html_content.append('<h5>Input</h5>')
+                        html_content.append(f'<div class="content">{eval_row.get("input_query", "N/A")}</div>')
+                        html_content.append('</div>')
+                        
+                        # Generated Answer
+                        html_content.append('<div class="test-section">')
+                        html_content.append('<h5>Generated Answer</h5>')
+                        html_content.append(f'<div class="content">{eval_row.get("generated_answer", "N/A")}</div>')
+                        html_content.append('</div>')
+                        
+                        # Expected Answer
+                        html_content.append('<div class="test-section">')
+                        html_content.append('<h5>Expected Answer</h5>')
+                        html_content.append(f'<div class="content">{eval_row.get("expected_answer", "N/A")}</div>')
+                        html_content.append('</div>')
+                        
+                        # Score
+                        score = score_row.get('score', 'Unknown')
+                        html_content.append('<div class="test-section">')
+                        html_content.append('<h5>Score</h5>')
+                        html_content.append(f'<div class="score-value">{score}</div>')
+                        html_content.append('</div>')
+                        
+                        # Additional information (judge feedback, etc.)
+                        additional_info = []
+                        for key, value in score_row.items():
+                            if key != 'score':
+                                additional_info.append(f'<p><strong>{key}:</strong> {value}</p>')
+                        
+                        if additional_info:
+                            html_content.append('<div class="test-section">')
+                            html_content.append('<h5>Additional Information</h5>')
+                            html_content.append('<div class="content">')
+                            html_content.extend(additional_info)
+                            html_content.append('</div>')
+                            html_content.append('</div>')
+                        
+                        html_content.append('</div>')
                     
-                    # Score distribution
-                    markdown_lines.append("### Score Distribution")
-                    for score, count in sorted(score_counts.items()):
-                        percentage = (count / total_tests) * 100
-                        markdown_lines.append(f"- **{score}**: {count} ({percentage:.1f}%)")
-                    markdown_lines.append("")
-                    
-                    # Detailed results
-                    markdown_lines.append("### Detailed Results")
-                    for i, row in enumerate(result.score_rows, 1):
-                        score = row.get('score', 'Unknown')
-                        feedback = row.get('judge_feedback', 'No feedback provided')
-                        markdown_lines.append(f"#### Test {i}")
-                        markdown_lines.append(f"**Score:** {score}")
-                        markdown_lines.append(f"**Feedback:** {feedback}")
-                        markdown_lines.append("")
+                    html_content.append('</div>')
                 else:
-                    markdown_lines.append("No detailed results available.")
-                    markdown_lines.append("")
+                    html_content.append('<p class="no-results">No detailed results available.</p>')
             
-            return "\n".join(markdown_lines)
+            return '\n'.join(html_content)
         
-        markdown_summary = generate_markdown_summary(scoring_response, config_path)
+        html_summary = generate_html_summary(scoring_response, config_path, eval_rows)
         
-        # Write markdown summary to HTML output
+        # Write HTML summary to output
         with open(output_path, 'w') as f:
-            f.write(f"""
-<!DOCTYPE html>
-<html>
+            f.write(f"""<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Test Results</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Results - {config_path}</title>
     <style>
-        body {{ font-family: Arial, sans-serif; margin: 40px; }}
-        h1, h2, h3 {{ color: #333; }}
-        h1 {{ border-bottom: 2px solid #ddd; }}
-        h2 {{ border-bottom: 1px solid #eee; }}
-        code {{ background-color: #f4f4f4; padding: 2px 4px; border-radius: 3px; }}
-        pre {{ background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }}
-        .score {{ font-weight: bold; color: #007acc; }}
-        .feedback {{ margin-left: 20px; font-style: italic; color: #666; }}
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }}
+        
+        .container {{
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }}
+        
+        .header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }}
+        
+        .content {{
+            padding: 30px;
+        }}
+        
+        h1 {{
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }}
+        
+        h2 {{
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin: 30px 0 20px 0;
+            font-size: 1.8em;
+        }}
+        
+        h3 {{
+            color: #34495e;
+            margin: 25px 0 15px 0;
+            font-size: 1.4em;
+        }}
+        
+        h4 {{
+            color: #2c3e50;
+            margin: 20px 0 10px 0;
+            font-size: 1.2em;
+        }}
+        
+        .config-path {{
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #ecf0f1;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }}
+        
+        code {{
+            background-color: #f4f4f4;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+        }}
+        
+        .aggregated-results {{
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }}
+        
+        .aggregated-results p {{
+            margin: 5px 0;
+        }}
+        
+        .test-results {{
+            margin-top: 20px;
+        }}
+        
+        .test-result {{
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }}
+        
+        .test-section {{
+            margin: 15px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }}
+        
+        .test-section:last-child {{
+            border-bottom: none;
+        }}
+        
+        .test-section h5 {{
+            color: #495057;
+            margin-bottom: 8px;
+            font-size: 1em;
+            font-weight: 600;
+        }}
+        
+        .test-section .content {{
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 3px solid #dee2e6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }}
+        
+        .score-value {{
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            padding: 8px 12px;
+            background: #e9ecef;
+            border-radius: 4px;
+            display: inline-block;
+            min-width: 60px;
+            text-align: center;
+        }}
+        
+        .no-results {{
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 40px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }}
+        
+        @media (max-width: 768px) {{
+            .container {{
+                margin: 10px;
+            }}
+            
+            .header, .content {{
+                padding: 20px;
+            }}
+            
+            h1 {{
+                font-size: 2em;
+            }}
+            
+            .test-result {{
+                padding: 15px;
+            }}
+        }}
     </style>
 </head>
 <body>
-    <div id="markdown-content">
-        {markdown_summary.replace(chr(10), '<br>').replace('**', '<strong>').replace('**', '</strong>').replace('`', '<code>').replace('`', '</code>').replace('# ', '<h1>').replace('</h1><br>', '</h1>').replace('## ', '<h2>').replace('</h2><br>', '</h2>').replace('### ', '<h3>').replace('</h3><br>', '</h3>').replace('#### ', '<h4>').replace('</h4><br>', '</h4>').replace('- ', '<li>').replace('<li>', '<ul><li>').replace('</li><br><li>', '</li><li>').replace('</li><br><br>', '</li></ul><br>')}
+    <div class="container">
+        <div class="header">
+            <h1>Test Results</h1>
+        </div>
+        <div class="content">
+            {html_summary}
+        </div>
     </div>
 </body>
-</html>
-            """)
+</html>""")
         
         print(f"Processed llamastack test config: {config_path}")
         print(f"Generated markdown summary with {len(eval_rows)} test results")
         
-        shutil.copy(output_path, output_markdown.path)
-        
-        return markdown_summary
+        shutil.copy(output_path, output_results.path)
 
 
 @dsl.pipeline(
