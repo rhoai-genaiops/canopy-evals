@@ -188,12 +188,50 @@ def run_llamastack_tests_from_config(
         )
         
         # Generate HTML summary
-        def generate_html_summary(scoring_response, config_path, eval_rows):
+        def generate_html_summary(scoring_response, config_path, eval_rows, scoring_params):
             html_content = []
             
             # Header
             html_content.append(f'<h1>Test Results</h1>')
             html_content.append(f'<p class="config-path"><strong>Config Path:</strong> <code>{config_path}</code></p>')
+            
+            # Scoring Parameters
+            html_content.append('<div class="scoring-params">')
+            html_content.append('<h3>Scoring Configuration</h3>')
+            
+            for function_name, function_config in scoring_params.items():
+                html_content.append(f'<div class="scoring-function">')
+                html_content.append(f'<h4 class="function-name">{function_name}</h4>')
+                
+                if function_config is None:
+                    html_content.append('<p class="null-config">No configuration (default behavior)</p>')
+                else:
+                    html_content.append('<div class="function-details">')
+                    
+                    for key, value in function_config.items():
+                        html_content.append(f'<div class="config-item">')
+                        html_content.append(f'<span class="config-key">{key}:</span>')
+                        
+                        if key == "prompt_template":
+                            # Special formatting for prompt templates
+                            html_content.append(f'<div class="prompt-template">{value}</div>')
+                        elif isinstance(value, list):
+                            # Format lists nicely
+                            html_content.append('<ul class="config-list">')
+                            for item in value:
+                                html_content.append(f'<li>{item}</li>')
+                            html_content.append('</ul>')
+                        else:
+                            # Regular values
+                            html_content.append(f'<span class="config-value">{value}</span>')
+                        
+                        html_content.append('</div>')
+                    
+                    html_content.append('</div>')
+                
+                html_content.append('</div>')
+            
+            html_content.append('</div>')
             
             for scoring_function_name, result in scoring_response.results.items():
                 html_content.append(f'<h2>{scoring_function_name}</h2>')
@@ -263,7 +301,7 @@ def run_llamastack_tests_from_config(
             
             return '\n'.join(html_content)
         
-        html_summary = generate_html_summary(scoring_response, config_path, eval_rows)
+        html_summary = generate_html_summary(scoring_response, config_path, eval_rows, scoring_params)
         
         # Write HTML summary to output
         with open(output_path, 'w') as f:
@@ -349,6 +387,93 @@ def run_llamastack_tests_from_config(
             border-radius: 4px;
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             font-size: 0.9em;
+        }}
+        
+        .scoring-params {{
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }}
+        
+        .scoring-function {{
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }}
+        
+        .function-name {{
+            color: #007bff;
+            margin: 0 0 15px 0;
+            font-size: 1.1em;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 8px;
+        }}
+        
+        .function-details {{
+            margin-left: 10px;
+        }}
+        
+        .config-item {{
+            margin: 10px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }}
+        
+        .config-key {{
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.9em;
+        }}
+        
+        .config-value {{
+            color: #6c757d;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85em;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 3px;
+            display: inline-block;
+        }}
+        
+        .prompt-template {{
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.8em;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #495057;
+            margin-top: 5px;
+        }}
+        
+        .config-list {{
+            margin: 5px 0 0 20px;
+            padding: 0;
+        }}
+        
+        .config-list li {{
+            background: #f8f9fa;
+            margin: 3px 0;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85em;
+            color: #495057;
+        }}
+        
+        .null-config {{
+            color: #6c757d;
+            font-style: italic;
+            margin: 10px 0;
         }}
         
         .aggregated-results {{
@@ -478,9 +603,6 @@ def run_llamastack_tests_from_config(
     </div>
 </body>
 </html>""")
-        
-        print(f"Processed llamastack test config: {config_path}")
-        print(f"Generated markdown summary with {len(eval_rows)} test results")
         
         shutil.copy(output_path, output_results.path)
 
