@@ -188,12 +188,38 @@ def run_llamastack_tests_from_config(
         )
         
         # Generate HTML summary
-        def generate_html_summary(scoring_response, config_path, eval_rows, scoring_params):
+        def generate_html_summary(scoring_response, config_path, eval_rows, scoring_params, config):
             html_content = []
             
             # Header
             html_content.append(f'<h1>Test Results</h1>')
             html_content.append(f'<p class="config-path"><strong>Config Path:</strong> <code>{config_path}</code></p>')
+            
+            # Test Configuration Details
+            html_content.append('<div class="test-config">')
+            html_content.append('<h3>Test Configuration</h3>')
+            html_content.append('<div class="config-details">')
+            
+            if 'name' in config:
+                html_content.append(f'<div class="config-detail">')
+                html_content.append(f'<span class="detail-label">Name:</span>')
+                html_content.append(f'<span class="detail-value">{config["name"]}</span>')
+                html_content.append('</div>')
+            
+            if 'description' in config:
+                html_content.append(f'<div class="config-detail">')
+                html_content.append(f'<span class="detail-label">Description:</span>')
+                html_content.append(f'<span class="detail-value">{config["description"]}</span>')
+                html_content.append('</div>')
+            
+            if 'endpoint' in config:
+                html_content.append(f'<div class="config-detail">')
+                html_content.append(f'<span class="detail-label">Endpoint:</span>')
+                html_content.append(f'<span class="detail-value endpoint">{config["endpoint"]}</span>')
+                html_content.append('</div>')
+            
+            html_content.append('</div>')
+            html_content.append('</div>')
             
             # Scoring Parameters
             html_content.append('<div class="scoring-params">')
@@ -301,7 +327,7 @@ def run_llamastack_tests_from_config(
             
             return '\n'.join(html_content)
         
-        html_summary = generate_html_summary(scoring_response, config_path, eval_rows, scoring_params)
+        html_summary = generate_html_summary(scoring_response, config_path, eval_rows, scoring_params, config)
         
         # Write HTML summary to output
         with open(output_path, 'w') as f:
@@ -379,6 +405,46 @@ def run_llamastack_tests_from_config(
             background: #ecf0f1;
             border-radius: 5px;
             border-left: 4px solid #3498db;
+        }}
+        
+        .test-config {{
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }}
+        
+        .config-details {{
+            margin-top: 15px;
+        }}
+        
+        .config-detail {{
+            display: flex;
+            align-items: flex-start;
+            margin: 10px 0;
+            gap: 10px;
+        }}
+        
+        .detail-label {{
+            font-weight: 600;
+            color: #495057;
+            min-width: 100px;
+            flex-shrink: 0;
+        }}
+        
+        .detail-value {{
+            color: #6c757d;
+            flex-grow: 1;
+        }}
+        
+        .detail-value.endpoint {{
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: #ffffff;
+            padding: 4px 8px;
+            border-radius: 3px;
+            border: 1px solid #dee2e6;
+            color: #495057;
         }}
         
         code {{
