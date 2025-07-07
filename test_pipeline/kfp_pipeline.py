@@ -215,51 +215,48 @@ def run_llamastack_tests_from_config(
                     html_content.append('<h3>Test Results</h3>')
                     html_content.append('<div class="test-results">')
                     
+                    # Create single table for all test results
+                    html_content.append('<table class="results-table">')
+                    
+                    # Create header row
+                    html_content.append('<thead>')
+                    html_content.append('<tr>')
+                    html_content.append('<th>Test #</th>')
+                    html_content.append('<th>Input</th>')
+                    html_content.append('<th>Generated Answer</th>')
+                    html_content.append('<th>Expected Answer</th>')
+                    html_content.append('<th>Score</th>')
+                    
+                    # Get all additional column headers from first score row
+                    if result.score_rows:
+                        for key in result.score_rows[0].keys():
+                            if key != 'score':
+                                html_content.append(f'<th>{key.replace("_", " ").title()}</th>')
+                    
+                    html_content.append('</tr>')
+                    html_content.append('</thead>')
+                    
+                    # Create data rows
+                    html_content.append('<tbody>')
                     for i, (eval_row, score_row) in enumerate(zip(eval_rows, result.score_rows), 1):
-                        html_content.append(f'<div class="test-result">')
-                        html_content.append(f'<h4>Test {i}</h4>')
+                        html_content.append('<tr>')
+                        html_content.append(f'<td class="test-number">{i}</td>')
+                        html_content.append(f'<td class="content">{eval_row.get("input_query", "N/A")}</td>')
+                        html_content.append(f'<td class="content">{eval_row.get("generated_answer", "N/A")}</td>')
+                        html_content.append(f'<td class="content">{eval_row.get("expected_answer", "N/A")}</td>')
                         
-                        # Input
-                        html_content.append('<div class="test-section">')
-                        html_content.append('<h5>Input</h5>')
-                        html_content.append(f'<div class="content">{eval_row.get("input_query", "N/A")}</div>')
-                        html_content.append('</div>')
-                        
-                        # Generated Answer
-                        html_content.append('<div class="test-section">')
-                        html_content.append('<h5>Generated Answer</h5>')
-                        html_content.append(f'<div class="content">{eval_row.get("generated_answer", "N/A")}</div>')
-                        html_content.append('</div>')
-                        
-                        # Expected Answer
-                        html_content.append('<div class="test-section">')
-                        html_content.append('<h5>Expected Answer</h5>')
-                        html_content.append(f'<div class="content">{eval_row.get("expected_answer", "N/A")}</div>')
-                        html_content.append('</div>')
-                        
-                        # Score
                         score = score_row.get('score', 'Unknown')
-                        html_content.append('<div class="test-section">')
-                        html_content.append('<h5>Score</h5>')
-                        html_content.append(f'<div class="score-value">{score}</div>')
-                        html_content.append('</div>')
+                        html_content.append(f'<td class="score-value">{score}</td>')
                         
-                        # Additional information (judge feedback, etc.)
-                        additional_info = []
+                        # Additional information columns
                         for key, value in score_row.items():
                             if key != 'score':
-                                additional_info.append(f'<p><strong>{key}:</strong> {value}</p>')
+                                html_content.append(f'<td class="content">{value}</td>')
                         
-                        if additional_info:
-                            html_content.append('<div class="test-section">')
-                            html_content.append('<h5>Additional Information</h5>')
-                            html_content.append('<div class="content">')
-                            html_content.extend(additional_info)
-                            html_content.append('</div>')
-                            html_content.append('</div>')
-                        
-                        html_content.append('</div>')
+                        html_content.append('</tr>')
                     
+                    html_content.append('</tbody>')
+                    html_content.append('</table>')
                     html_content.append('</div>')
                 else:
                     html_content.append('<p class="no-results">No detailed results available.</p>')
@@ -370,51 +367,67 @@ def run_llamastack_tests_from_config(
             margin-top: 20px;
         }}
         
-        .test-result {{
-            margin: 20px 0;
-            padding: 20px;
+        .results-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
-            border: 1px solid #dee2e6;
-            background: white;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
         }}
         
-        .test-section {{
-            margin: 15px 0;
-            padding: 10px 0;
-            border-bottom: 1px solid #f1f3f4;
-        }}
-        
-        .test-section:last-child {{
-            border-bottom: none;
-        }}
-        
-        .test-section h5 {{
-            color: #495057;
-            margin-bottom: 8px;
-            font-size: 1em;
+        .results-table th {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 10px;
+            text-align: left;
             font-weight: 600;
+            font-size: 0.9em;
+            border-bottom: 2px solid #5a67d8;
         }}
         
-        .test-section .content {{
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 4px;
-            border-left: 3px solid #dee2e6;
-            white-space: pre-wrap;
+        .results-table td {{
+            padding: 12px 10px;
+            border-bottom: 1px solid #f1f3f4;
+            vertical-align: top;
+            max-width: 250px;
             word-wrap: break-word;
+            overflow-wrap: break-word;
         }}
         
-        .score-value {{
-            font-size: 1.5em;
+        .results-table tbody tr:nth-child(even) {{
+            background: #f8f9fa;
+        }}
+        
+        .results-table tbody tr:hover {{
+            background: #e9ecef;
+        }}
+        
+        .results-table td.test-number {{
+            text-align: center;
             font-weight: bold;
             color: #2c3e50;
-            padding: 8px 12px;
-            background: #e9ecef;
-            border-radius: 4px;
-            display: inline-block;
-            min-width: 60px;
+            width: 80px;
+            min-width: 80px;
+        }}
+        
+        .results-table td.content {{
+            white-space: pre-wrap;
+            line-height: 1.5;
+            font-size: 0.9em;
+        }}
+        
+        .results-table td.score-value {{
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
             text-align: center;
+            width: 100px;
+            min-width: 100px;
+        }}
+        
+        .results-table tbody tr:last-child td {{
+            border-bottom: none;
         }}
         
         .no-results {{
@@ -439,8 +452,17 @@ def run_llamastack_tests_from_config(
                 font-size: 2em;
             }}
             
-            .test-result {{
-                padding: 15px;
+            .results-table {{
+                font-size: 0.8em;
+            }}
+            
+            .results-table th,
+            .results-table td {{
+                padding: 8px 5px;
+            }}
+            
+            .results-table td.content {{
+                max-width: 150px;
             }}
         }}
     </style>
@@ -507,8 +529,8 @@ if __name__ == '__main__':
         "repo_url": "https://github.com/rhoai-genaiops/canopy-prompts",
         "branch": "main",
         "workspace_pvc": "canopy-workspace-pvc",
-        "base_url": "http://llamastack-server-genaiops-playground.apps.dev.rhoai.rh-aiservices-bu.com",
-        "backend_url": "https://canopy-backend-genaiops-playground.apps.dev.rhoai.rh-aiservices-bu.com",
+        "base_url": "http://llama-stack.genaiops-rag.svc.cluster.local:80",
+        "backend_url": "https://canopy-backend-user1-canopy.apps.cluster-gm86c.gm86c.sandbox1062.opentlc.com",
     }
         
     namespace_file_path =\
