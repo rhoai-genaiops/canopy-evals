@@ -1,0 +1,101 @@
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: {{ .Values.tekton.triggers.template.name }}
+  labels:
+    {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
+  annotations:
+    {{- include "canopy-tekton-pipeline.annotations" . | nindent 4 }}
+spec:
+  params:
+    - name: gitrepositoryurl
+      description: The git repository url
+    - name: git-revision
+      description: The git revision
+      default: {{ .Values.git.revision }}
+    - name: git-short-revision
+      description: Seven character git sha
+    - name: git-ref
+      description: The full git ref
+      default: refs/heads/{{ .Values.webhook.branch }}
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: {{ .Values.tekton.pipeline.name }}-
+        labels:
+          {{- include "canopy-tekton-pipeline.labels" . | nindent 10 }}
+      spec:
+        pipelineRef:
+          name: {{ .Values.tekton.pipeline.name }}
+        params:
+          - name: GIT_URL
+            value: $(tt.params.gitrepositoryurl)
+          - name: GIT_REVISION
+            value: $(tt.params.git-revision)
+          - name: GIT_SHORT_REVISION
+            value: $(tt.params.git-short-revision)
+          - name: BASE_URL
+            value: {{ .Values.kfp.baseUrl | quote }}
+          - name: BACKEND_URL
+            value: {{ .Values.kfp.backendUrl | quote }}
+        workspaces:
+        - name: shared-workspace
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.name }}
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: Trigger
+metadata:
+  name: {{ .Values.tekton.triggers.trigger.name }}
+  labels:
+    {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
+  annotations:
+    {{- include "canopy-tekton-pipeline.annotations" . | nindent 4 }}
+spec:
+  interceptors:
+    - ref:
+        name: "github"
+      params:
+        - name: "eventTypes"
+          value: {{ .Values.webhook.eventTypes | toJson }}
+        - name: "secretRef"
+          value:
+            secretName: {{ .Values.secrets.github.name }}
+            secretKey: {{ .Values.secrets.github.key }}
+    - ref:
+        name: "cel"
+      params:
+        - name: filter
+          value: (body.ref == 'refs/heads/{{ .Values.webhook.branch }}')
+        - name: overlays
+          value:
+          - expression: body.head_commit.id.truncate(7)
+            key: truncated_sha
+  bindings:
+    - name: git-revision
+      value: $(body.head_commit.id)
+    - name: git-short-revision
+      value: $(extensions.truncated_sha)
+    - name: gitrepositoryurl
+      value: $(body.repository.clone_url)
+    - name: git-ref
+      value: $(body.ref)
+  template:
+    ref: {{ .Values.tekton.triggers.template.name }}
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: {{ .Values.tekton.triggers.eventListener.name }}
+  labels:
+    {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
+  annotations:
+    {{- include "canopy-tekton-pipeline.annotations" . | nindent 4 }}
+spec:
+  serviceAccountName: {{ .Values.tekton.triggers.eventListener.serviceAccount }}
+  triggers:
+    - triggerRef: {{ .Values.tekton.triggers.trigger.name }}
