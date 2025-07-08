@@ -756,6 +756,7 @@ def canopy_test_pipeline(
     workspace_pvc: str = "canopy-workspace-pvc",
     base_url: str = "",
     backend_url: str = "",
+    secret_name:str = "test-results",
 ):
     # Step 1: Clone repo
     clone_task = git_clone_op(repo_url=repo_url, branch=branch)
@@ -790,7 +791,7 @@ def canopy_test_pipeline(
     # Add environment variables from Kubernetes secret for S3 access
     kubernetes.use_secret_as_env(
         test_task,
-        secret_name='test-results',
+        secret_name=secret_name,
         secret_key_to_env={
             'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',
             'AWS_DEFAULT_REGION': 'AWS_DEFAULT_REGION', 

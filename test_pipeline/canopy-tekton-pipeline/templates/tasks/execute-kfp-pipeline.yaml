@@ -92,7 +92,7 @@ spec:
       
       # Pipeline arguments
       arguments = {
-          "workspace_pvc": "{{ .Values.pvc.name }}",
+          "workspace_pvc": "{{ .Values.kfp.pvc }}",
           "base_url": "$(params.BASE_URL)",
           "backend_url": "$(params.BACKEND_URL)",
           "secret_name": "{{ .Values.secrets.s3.name }}",
@@ -100,9 +100,9 @@ spec:
       
       print("🏃‍♂️ Starting Kubeflow Pipeline run...")
       run_id = client.create_run_from_pipeline_func(
-          simple_canopy_test_pipeline,
+          canopy_test_pipeline,
           arguments=arguments,
-          experiment_name="simple-canopy-test-pipeline",
+          experiment_name="canopy-test-pipeline",
           namespace=namespace,
           enable_caching=False
       )

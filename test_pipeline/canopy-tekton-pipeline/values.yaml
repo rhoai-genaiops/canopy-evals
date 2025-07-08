@@ -28,6 +28,9 @@ secrets:
 tekton:
   pipeline:
     name: "canopy-test-pipeline"
+
+  workspace:
+    name: "shared-workspace"
   
   task:
     name: "execute-kfp-pipeline"

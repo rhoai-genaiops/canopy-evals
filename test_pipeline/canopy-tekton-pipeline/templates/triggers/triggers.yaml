@@ -43,7 +43,7 @@ spec:
         workspaces:
         - name: shared-workspace
           persistentVolumeClaim:
-            claimName: {{ .Values.pvc.name }}
+            claimName: {{ .Values.tekton.workspace.name }}
 
 ---
 apiVersion: triggers.tekton.dev/v1beta1
