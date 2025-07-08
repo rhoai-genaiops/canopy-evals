@@ -99,6 +99,8 @@ spec:
           "backend_url": "$(params.BACKEND_URL)",
           "secret_name": "{{ .Values.secrets.s3.name }}",
       }
+
+      print(f"Arguments for the pipeline: {arguments}")
       
       print("🏃‍♂️ Starting Kubeflow Pipeline run...")
       run_id = client.create_run_from_pipeline_func(

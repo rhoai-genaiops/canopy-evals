@@ -756,7 +756,7 @@ def canopy_test_pipeline(
     workspace_pvc: str = "canopy-workspace-pvc",
     base_url: str = "",
     backend_url: str = "",
-    secret_name:str = "test-results",
+    secret_name: str = "test-results",
 ):
     # Step 1: Clone repo
     clone_task = git_clone_op(repo_url=repo_url, branch=branch)
@@ -809,6 +809,7 @@ if __name__ == '__main__':
         "workspace_pvc": "canopy-workspace-pvc",
         "base_url": "http://llama-stack.genaiops-rag.svc.cluster.local:80",
         "backend_url": "https://canopy-backend-user1-canopy.apps.cluster-gm86c.gm86c.sandbox1062.opentlc.com",
+        "secret_name": "test-results",
     }
         
     namespace_file_path =\
