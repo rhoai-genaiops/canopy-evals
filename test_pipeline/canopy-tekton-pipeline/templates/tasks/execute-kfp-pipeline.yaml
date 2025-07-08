@@ -95,17 +95,26 @@ spec:
           "workspace_pvc": "{{ .Values.pvc.name }}",
           "base_url": "$(params.BASE_URL)",
           "backend_url": "$(params.BACKEND_URL)",
+          "secret_name": "{{ .Values.secrets.s3.name }}",
       }
       
       print("🏃‍♂️ Starting Kubeflow Pipeline run...")
-      run_result = client.create_run_from_pipeline_func(
+      run_id = client.create_run_from_pipeline_func(
           simple_canopy_test_pipeline,
           arguments=arguments,
           experiment_name="simple-canopy-test-pipeline",
           namespace=namespace,
           enable_caching=False
       )
-      
-      print(f"🎉 Pipeline run created with ID: {run_result.run_id}")
+
+      print("🥱 wait for the run to finish")
+      # wait for the run to finish
+      client.wait_for_run_completion(
+          run_id=run_id.run_id, 
+          timeout=7200,
+          sleep_duration=5,
+      )
+
+      print(f"🎉 Pipeline run created with ID: {run_id.run_id}")
       print("✅ Kubeflow Pipeline execution completed successfully!")
       EOF

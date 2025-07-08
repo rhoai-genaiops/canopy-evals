@@ -710,6 +710,7 @@ def simple_canopy_test_pipeline(
     workspace_pvc: str = "canopy-workspace-pvc",
     base_url: str = "",
     backend_url: str = "",
+    secret_name:str = "test-results",
 ):
     # Step 1: Scan for all test configs (no git clone needed)
     scan_task = scan_directory_op()
@@ -735,7 +736,7 @@ def simple_canopy_test_pipeline(
     # Add environment variables from Kubernetes secret for S3 access
     kubernetes.use_secret_as_env(
         test_task,
-        secret_name='test-results',
+        secret_name=secret_name,
         secret_key_to_env={
             'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',
             'AWS_DEFAULT_REGION': 'AWS_DEFAULT_REGION', 
@@ -751,6 +752,7 @@ if __name__ == '__main__':
         "workspace_pvc": "canopy-workspace-pvc",
         "base_url": "http://llama-stack.genaiops-rag.svc.cluster.local:80",
         "backend_url": "https://canopy-backend-user1-canopy.apps.cluster-gm86c.gm86c.sandbox1062.opentlc.com",
+        "secret_name": "test-results",
     }
         
     namespace_file_path =\
