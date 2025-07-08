@@ -67,7 +67,7 @@ spec:
       sys.path.insert(0, '.')
       
       # Import the pipeline
-      from kfp_pipeline_simple import simple_canopy_test_pipeline
+      from kfp_pipeline import canopy_test_pipeline
       
       # Get namespace from service account
       namespace_file_path = '/var/run/secrets/kubernetes.io/serviceaccount/namespace'

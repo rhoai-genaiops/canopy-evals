@@ -10,14 +10,7 @@ git:
 kfp:
   baseUrl: "http://llama-stack.user1-canopy.svc.cluster.local:80"
   backendUrl: "https://canopy-backend-user1-canopy.apps.cluster-gm86c.gm86c.sandbox1062.opentlc.com"
-
-# PVC configuration
-pvc:
-  name: "canopy-workspace-pvc"
-  size: "1Gi"
-  storageClass: "ocs-storagecluster-cephfs"
-  accessModes:
-    - ReadWriteMany
+  pvc: "canopy-eval-pvc"
 
 # Secrets configuration
 secrets:  
