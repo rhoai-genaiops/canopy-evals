@@ -1,4 +1,4 @@
-# GuideLL Benchmark Pipeline
+# GuideLLM Benchmark Pipeline
 
 A configurable pipeline for running guidellm benchmarks against model endpoints with result extraction and packaging.
 
