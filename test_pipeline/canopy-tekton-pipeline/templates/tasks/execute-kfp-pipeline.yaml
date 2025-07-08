@@ -92,7 +92,9 @@ spec:
       
       # Pipeline arguments
       arguments = {
-          "workspace_pvc": "{{ .Values.kfp.pvc }}",
+          "repo_url": "{{ .Values.git.promptUrl }}",
+          "branch": "{{ .Values.git.promptRevision }}",
+          "workspace_pvc": "{{ .Values.kfp.workspace }}",
           "base_url": "$(params.BASE_URL)",
           "backend_url": "$(params.BACKEND_URL)",
           "secret_name": "{{ .Values.secrets.s3.name }}",

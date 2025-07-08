@@ -13,7 +13,7 @@ spec:
       description: The git repository url
     - name: git-revision
       description: The git revision
-      default: {{ .Values.git.revision }}
+      default: {{ .Values.git.backendRevision }}
     - name: git-short-revision
       description: Seven character git sha
     - name: git-ref

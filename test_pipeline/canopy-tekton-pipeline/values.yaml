@@ -3,8 +3,8 @@
 
 # Git repository configuration
 git:
-  url: "https://gitea-gitea.apps.cluster-gm86c.gm86c.sandbox1062.opentlc.com/user1/canopy-be"
-  revision: "main"
+  promptUrl: "https://gitea-gitea.apps.cluster-gm86c.gm86c.sandbox1062.opentlc.com/user1/canopy-prompts"
+  promptRevision: "main"
 
 # Kubeflow Pipeline configuration
 kfp:

@@ -10,11 +10,11 @@ spec:
   params:
     - name: GIT_URL
       type: string
-      default: {{ .Values.git.url | quote }}
+      default: {{ .Values.git.promptUrl | quote }}
       description: Git repository URL
     - name: GIT_REVISION
       type: string
-      default: {{ .Values.git.revision | quote }}
+      default: {{ .Values.git.promptRevision | quote }}
       description: Git revision to clone
     - name: BASE_URL
       type: string
