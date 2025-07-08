@@ -3,12 +3,12 @@
 
 # Git repository configuration
 git:
-  url: "https://github.com/rhoai-genaiops/canopy-prompts"
+  url: "https://gitea-gitea.apps.cluster-gm86c.gm86c.sandbox1062.opentlc.com/user1/canopy-be"
   revision: "main"
 
 # Kubeflow Pipeline configuration
 kfp:
-  baseUrl: "http://llama-stack.genaiops-rag.svc.cluster.local:80"
+  baseUrl: "http://llama-stack.user1-canopy.svc.cluster.local:80"
   backendUrl: "https://canopy-backend-user1-canopy.apps.cluster-gm86c.gm86c.sandbox1062.opentlc.com"
 
 # PVC configuration
@@ -20,12 +20,7 @@ pvc:
     - ReadWriteMany
 
 # Secrets configuration
-secrets:
-  # GitHub webhook secret name
-  github:
-    name: "github-secret"
-    key: "secretToken"
-  
+secrets:  
   # S3/MinIO credentials secret name
   s3:
     name: "test-results"

@@ -9,6 +9,7 @@ metadata:
 spec:
   workspaces:
     - name: output
+      description: Workspace for pipeline files
   params:
     - name: BASE_URL
       description: Base URL for LlamaStack

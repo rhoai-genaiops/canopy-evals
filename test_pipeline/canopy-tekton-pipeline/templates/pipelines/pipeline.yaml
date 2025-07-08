@@ -4,8 +4,6 @@ metadata:
   name: {{ .Values.tekton.pipeline.name }}
   labels:
     {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
-  annotations:
-    {{- include "canopy-tekton-pipeline.annotations" . | nindent 4 }}
 spec:
   workspaces:
     - name: shared-workspace
@@ -13,20 +11,20 @@ spec:
     - name: GIT_URL
       type: string
       default: {{ .Values.git.url | quote }}
+      description: Git repository URL
     - name: GIT_REVISION
       type: string
       default: {{ .Values.git.revision | quote }}
-    - name: GIT_SHORT_REVISION
-      type: string
-      default: ""
+      description: Git revision to clone
     - name: BASE_URL
       type: string
       default: {{ .Values.kfp.baseUrl | quote }}
+      description: Base URL for LlamaStack
     - name: BACKEND_URL
       type: string
       default: {{ .Values.kfp.backendUrl | quote }}
+      description: Backend URL for canopy
   tasks:
-    # Clone the canopy-prompts repository
     - name: git-clone
       taskRef:
         resolver: cluster
@@ -49,12 +47,9 @@ spec:
           value: "true"
         - name: SSL_VERIFY
           value: "true"
-
-    # Execute the Kubeflow Pipeline
     - name: execute-kfp-pipeline
       taskRef:
         name: {{ .Values.tekton.task.name }}
-        kind: Task
       workspaces:
         - name: output
           workspace: shared-workspace
@@ -64,6 +59,6 @@ spec:
         - name: BACKEND_URL
           value: "$(params.BACKEND_URL)"
         - name: GIT_SHORT_REVISION
-          value: "$(params.GIT_SHORT_REVISION)"
+          value: ""
       runAfter:
         - git-clone
