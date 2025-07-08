@@ -791,7 +791,7 @@ def canopy_test_pipeline(
     # Add environment variables from Kubernetes secret for S3 access
     kubernetes.use_secret_as_env(
         test_task,
-        secret_name=secret_name,
+        secret_name="test-results",
         secret_key_to_env={
             'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',
             'AWS_DEFAULT_REGION': 'AWS_DEFAULT_REGION', 
