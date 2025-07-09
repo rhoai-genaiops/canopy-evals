@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: {{ .Values.tekton.pipeline.name }}
+  name: canopy-test-pipeline
   labels:
     {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
 spec:
@@ -49,7 +49,7 @@ spec:
           value: "true"
     - name: execute-kfp-pipeline
       taskRef:
-        name: {{ .Values.tekton.task.name }}
+        name: execute-kfp-pipeline
       workspaces:
         - name: output
           workspace: shared-workspace

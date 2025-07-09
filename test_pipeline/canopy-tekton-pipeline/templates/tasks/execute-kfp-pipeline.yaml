@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: {{ .Values.tekton.task.name }}
+  name: execute-kfp-pipeline
   labels:
     {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
   annotations:
@@ -24,33 +24,7 @@ spec:
   steps:
   - name: execute-kfp-pipeline
     workingDir: $(workspaces.output.path)/test_pipeline
-    image: {{ .Values.images.python }}
-    env:
-      - name: {{ .Values.secrets.s3.keys.accessKeyId }}
-        valueFrom:
-          secretKeyRef:
-            name: {{ .Values.secrets.s3.name }}
-            key: {{ .Values.secrets.s3.keys.accessKeyId }}
-      - name: {{ .Values.secrets.s3.keys.secretAccessKey }}
-        valueFrom:
-          secretKeyRef:
-            name: {{ .Values.secrets.s3.name }}
-            key: {{ .Values.secrets.s3.keys.secretAccessKey }}
-      - name: {{ .Values.secrets.s3.keys.endpoint }}
-        valueFrom:
-          secretKeyRef:
-            name: {{ .Values.secrets.s3.name }}
-            key: {{ .Values.secrets.s3.keys.endpoint }}
-      - name: {{ .Values.secrets.s3.keys.bucket }}
-        valueFrom:
-          secretKeyRef:
-            name: {{ .Values.secrets.s3.name }}
-            key: {{ .Values.secrets.s3.keys.bucket }}
-      - name: {{ .Values.secrets.s3.keys.region }}
-        valueFrom:
-          secretKeyRef:
-            name: {{ .Values.secrets.s3.name }}
-            key: {{ .Values.secrets.s3.keys.region }}
+    image: registry.redhat.io/ubi9/python-311:latest
     command: ["/bin/sh", "-c"]
     args:
     - |

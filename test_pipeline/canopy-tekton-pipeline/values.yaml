@@ -3,13 +3,13 @@
 
 # Git repository configuration
 git:
-  promptUrl: "https://gitea-gitea.apps.cluster-gm86c.gm86c.sandbox1062.opentlc.com/user1/canopy-prompts"
+  promptUrl: "https://github.com/rhoai-genaiops/canopy-evals"
   promptRevision: "main"
 
 # Kubeflow Pipeline configuration
 kfp:
-  baseUrl: "http://llama-stack.user1-canopy.svc.cluster.local:80"
-  backendUrl: "https://canopy-backend-user1-canopy.apps.cluster-gm86c.gm86c.sandbox1062.opentlc.com"
+  baseUrl: "http://llama-stack"
+  backendUrl: "http://canopy-backend"
   pvc: "canopy-eval-pvc"
 
 # Secrets configuration
@@ -17,51 +17,8 @@ secrets:
   # S3/MinIO credentials secret name
   s3:
     name: "test-results"
-    keys:
-      accessKeyId: "AWS_ACCESS_KEY_ID"
-      secretAccessKey: "AWS_SECRET_ACCESS_KEY"
-      endpoint: "AWS_S3_ENDPOINT"
-      bucket: "AWS_S3_BUCKET"
-      region: "AWS_DEFAULT_REGION"
 
 # Tekton pipeline configuration
 tekton:
-  pipeline:
-    name: "canopy-test-pipeline"
-
   workspace:
     name: "shared-workspace"
-  
-  task:
-    name: "execute-kfp-pipeline"
-    image: "registry.redhat.io/ubi9/python-311:latest"
-  
-  triggers:
-    eventListener:
-      name: "canopy-test-event-listener"
-      serviceAccount: "pipeline"
-    
-    trigger:
-      name: "canopy-test-git-trigger"
-    
-    template:
-      name: "canopy-test-trigger-template"
-
-# Git webhook configuration
-webhook:
-  # Filter for git events (only main branch pushes)
-  branch: "main"
-  eventTypes:
-    - "push"
-
-# Container image configuration
-images:
-  python: "registry.redhat.io/ubi9/python-311:latest"
-
-# Labels and annotations
-labels:
-  app: "canopy-tekton-pipeline"
-  component: "testing"
-  
-annotations:
-  description: "Canopy LLM testing pipeline using Tekton and Kubeflow"

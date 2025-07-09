@@ -38,9 +38,8 @@ helm.sh/chart: {{ include "canopy-tekton-pipeline.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- with .Values.labels }}
-{{ toYaml . }}
-{{- end }}
+app: canopy-tekton-pipeline
+component: testing
 {{- end }}
 
 {{/*
@@ -55,7 +54,5 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Common annotations
 */}}
 {{- define "canopy-tekton-pipeline.annotations" -}}
-{{- with .Values.annotations }}
-{{- toYaml . }}
-{{- end }}
+description: "Canopy LLM testing pipeline using Tekton and Kubeflow"
 {{- end }}

@@ -2,7 +2,7 @@
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerTemplate
 metadata:
-  name: {{ .Values.tekton.triggers.template.name }}
+  name: canopy-test-trigger-template
   labels:
     {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
   annotations:
@@ -18,17 +18,17 @@ spec:
       description: Seven character git sha
     - name: git-ref
       description: The full git ref
-      default: refs/heads/{{ .Values.webhook.branch }}
+      default: refs/heads/main
   resourcetemplates:
     - apiVersion: tekton.dev/v1
       kind: PipelineRun
       metadata:
-        generateName: {{ .Values.tekton.pipeline.name }}-
+        generateName: canopy-test-pipeline-
         labels:
           {{- include "canopy-tekton-pipeline.labels" . | nindent 10 }}
       spec:
         pipelineRef:
-          name: {{ .Values.tekton.pipeline.name }}
+          name: canopy-test-pipeline
         params:
           - name: GIT_URL
             value: $(tt.params.gitrepositoryurl)
@@ -43,13 +43,13 @@ spec:
         workspaces:
         - name: shared-workspace
           persistentVolumeClaim:
-            claimName: {{ .Values.tekton.workspace.name }}
+            claimName: shared-workspace
 
 ---
 apiVersion: triggers.tekton.dev/v1beta1
 kind: Trigger
 metadata:
-  name: {{ .Values.tekton.triggers.trigger.name }}
+  name: canopy-test-git-trigger
   labels:
     {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
   annotations:
@@ -60,7 +60,7 @@ spec:
         name: "cel"
       params:
         - name: filter
-          value: (body.ref == 'refs/heads/{{ .Values.webhook.branch }}')
+          value: (body.ref == 'refs/heads/main')
         - name: overlays
           value:
           - expression: body.head_commit.id.truncate(7)
@@ -75,18 +75,18 @@ spec:
     - name: git-ref
       value: $(body.ref)
   template:
-    ref: {{ .Values.tekton.triggers.template.name }}
+    ref: canopy-test-trigger-template
 
 ---
 apiVersion: triggers.tekton.dev/v1beta1
 kind: EventListener
 metadata:
-  name: {{ .Values.tekton.triggers.eventListener.name }}
+  name: canopy-test-event-listener
   labels:
     {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
   annotations:
     {{- include "canopy-tekton-pipeline.annotations" . | nindent 4 }}
 spec:
-  serviceAccountName: {{ .Values.tekton.triggers.eventListener.serviceAccount }}
+  serviceAccountName: pipeline
   triggers:
-    - triggerRef: {{ .Values.tekton.triggers.trigger.name }}
+    - triggerRef: canopy-test-git-trigger
