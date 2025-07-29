@@ -804,11 +804,11 @@ def canopy_test_pipeline(
 
 if __name__ == '__main__':
     arguments = {
-        "repo_url": "https://github.com/rhoai-genaiops/canopy-prompts",
+        "repo_url": "https://github.com/rhoai-genaiops/canopy-evals",
         "branch": "main",
-        "workspace_pvc": "canopy-workspace-pvc",
-        "base_url": "http://llama-stack.genaiops-rag.svc.cluster.local:80",
-        "backend_url": "https://canopy-backend-user1-canopy.apps.cluster-gm86c.gm86c.sandbox1062.opentlc.com",
+        "workspace_pvc": "canopy-eval-pvc",
+        "base_url": "http://llama-stack.user1-test.svc.cluster.local:80",
+        "backend_url": "http://canopy-backend.user1-canopy.svc.cluster.local:8000",
         "secret_name": "test-results",
     }
         
