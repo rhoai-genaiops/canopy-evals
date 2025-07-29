@@ -40,6 +40,7 @@ def git_clone_op(
     import os
     import subprocess
     import shutil
+    from urllib.parse import urlparse, urlunparse
 
     folder = "/prompts"
 
@@ -50,6 +51,22 @@ def git_clone_op(
         elif os.path.isdir(path):
             shutil.rmtree(path)
     
+    # pick up your secret mounted env vars
+    username = os.getenv("GIT_USERNAME")
+    password = os.getenv("GIT_PASSWORD")
+    
+    if username and password:
+        # parse the original repo URL
+        parsed = urlparse(repo_url)
+        # build a new "netloc" with creds
+        netloc = f"{username}:{password}@{parsed.hostname}"
+        if parsed.port:
+            netloc += f":{parsed.port}"
+        # reassemble the URL with credentials embedded
+        repo_url = urlunparse(parsed._replace(netloc=netloc))
+
+    print(f"Cloning repository {repo_url} at branch {branch} into {folder}")
+
     # Clone the repository
     subprocess.run([
         "git", "clone",
@@ -773,6 +790,12 @@ def canopy_test_pipeline(
         pvc_name=eval_pvc.outputs['name'],
         mount_path='/prompts',
     )
+    kubernetes.use_secret_as_env(clone_task,
+                                 secret_name='git-auth',
+                                 secret_key_to_env={
+                                    'username': 'GIT_USERNAME',
+                                    'password': 'GIT_PASSWORD',
+                                    })
 
     # Step 2: Scan for all test configs
     scan_task = scan_directory_op()
