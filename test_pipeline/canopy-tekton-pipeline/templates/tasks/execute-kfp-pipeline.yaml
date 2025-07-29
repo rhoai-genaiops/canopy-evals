@@ -13,6 +13,18 @@ spec:
     - name: BACKEND_URL
       description: Backend URL for canopy
       type: string
+    - name: GIT_URL
+      type: string
+      default: https://github.com/rhoai-genaiops/canopy-evals
+      description: Git repository URL
+    - name: GIT_BRANCH
+      type: string
+      default: "main"
+      description: Git branch to clone
+    - name: GIT_REVISION
+      type: string
+      default: "latest"
+      description: Git revision to clone
     - name: GIT_SHORT_REVISION
       description: Short Git commit hash
       type: string
@@ -62,8 +74,8 @@ spec:
       
       # Pipeline arguments
       arguments = {
-          "repo_url": "{{ .Values.git.promptUrl }}",
-          "branch": "{{ .Values.git.promptRevision }}",
+          "repo_url": "$(params.GIT_URL)",
+          "branch": "$(params.GIT_BRANCH)",
           "base_url": "$(params.BASE_URL)",
           "backend_url": "$(params.BACKEND_URL)",
           "secret_name": "{{ .Values.secrets.s3.name }}",

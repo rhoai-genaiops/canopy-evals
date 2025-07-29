@@ -2,3 +2,6 @@ USER_NAME: "your-username"
 kfp:
   baseUrl: "http://llama-stack"
   backendUrl: "http://canopy-backend"
+secrets:
+  s3:
+    name: "test-results"

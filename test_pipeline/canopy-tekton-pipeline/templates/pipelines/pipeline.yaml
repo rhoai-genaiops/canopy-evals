@@ -10,10 +10,18 @@ spec:
       type: string
       default: https://github.com/rhoai-genaiops/canopy-evals
       description: Git repository URL
-    - name: GIT_REVISION
+    - name: GIT_BRANCH
       type: string
       default: "main"
+      description: Git branch to clone
+    - name: GIT_REVISION
+      type: string
+      default: "latest"
       description: Git revision to clone
+    - name: GIT_SHORT_REVISION
+      type: string
+      default: "latest"
+      description: Short Git commit hash
     - name: BASE_URL
       type: string
       default: {{ .Values.kfp.baseUrl | quote }}
@@ -56,7 +64,13 @@ spec:
           value: "$(params.BASE_URL)"
         - name: BACKEND_URL
           value: "$(params.BACKEND_URL)"
+        - name: GIT_URL
+          value: "$(params.GIT_URL)"
+        - name: GIT_BRANCH
+          value: "$(params.GIT_BRANCH)"
+        - name: GIT_REVISION
+          value: "$(params.GIT_REVISION)"
         - name: GIT_SHORT_REVISION
-          value: ""
+          value: "$(params.GIT_SHORT_REVISION)"
       runAfter:
         - git-clone

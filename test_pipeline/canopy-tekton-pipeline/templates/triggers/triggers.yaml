@@ -7,6 +7,8 @@ spec:
   params:
     - name: gitrepositoryurl
       description: The git repository url
+    - name: git-branch
+      description: The git branch
     - name: git-revision
       description: The git revision
     - name: git-short-revision
@@ -25,6 +27,8 @@ spec:
         params:
           - name: GIT_URL
             value: $(tt.params.gitrepositoryurl)
+          - name: GIT_BRANCH
+            value: $(tt.params.git-branch)
           - name: GIT_REVISION
             value: $(tt.params.git-revision)
           - name: GIT_SHORT_REVISION
@@ -54,7 +58,11 @@ spec:
           value:
           - expression: body.head_commit.id.truncate(7)
             key: truncated_sha
+          - expression: body.ref.split('/')[2]
+            key: branch_name
   bindings:
+    - name: git-branch
+      value: $(extensions.branch_name)
     - name: git-revision
       value: $(body.head_commit.id)
     - name: git-short-revision
