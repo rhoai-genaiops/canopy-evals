@@ -1,24 +1,4 @@
-# Default values for canopy-tekton-pipeline
-# This is a YAML-formatted file.
-
-# Git repository configuration
-git:
-  promptUrl: "https://github.com/rhoai-genaiops/canopy-evals"
-  promptRevision: "main"
-
-# Kubeflow Pipeline configuration
+USER_NAME: "your-username"
 kfp:
   baseUrl: "http://llama-stack"
   backendUrl: "http://canopy-backend"
-  pvc: "canopy-eval-pvc"
-
-# Secrets configuration
-secrets:  
-  # S3/MinIO credentials secret name
-  s3:
-    name: "test-results"
-
-# Tekton pipeline configuration
-tekton:
-  workspace:
-    name: "shared-workspace"

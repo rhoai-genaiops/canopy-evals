@@ -2,19 +2,17 @@ apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: canopy-test-pipeline
-  labels:
-    {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
 spec:
   workspaces:
     - name: shared-workspace
   params:
     - name: GIT_URL
       type: string
-      default: {{ .Values.git.promptUrl | quote }}
+      default: https://github.com/rhoai-genaiops/canopy-evals
       description: Git repository URL
     - name: GIT_REVISION
       type: string
-      default: {{ .Values.git.promptRevision | quote }}
+      default: "main"
       description: Git revision to clone
     - name: BASE_URL
       type: string
@@ -34,7 +32,7 @@ spec:
           - name: name
             value: git-clone
           - name: namespace
-            value: openshift-pipelines
+            value: openshift-pipelines 
       workspaces:
         - name: output
           workspace: shared-workspace
@@ -42,11 +40,11 @@ spec:
         - name: URL
           value: "$(params.GIT_URL)"
         - name: REVISION
-          value: "$(params.GIT_REVISION)"
+          value: "main"
         - name: DELETE_EXISTING
           value: "true"
         - name: SSL_VERIFY
-          value: "true"
+          value: "false"
     - name: execute-kfp-pipeline
       taskRef:
         name: execute-kfp-pipeline

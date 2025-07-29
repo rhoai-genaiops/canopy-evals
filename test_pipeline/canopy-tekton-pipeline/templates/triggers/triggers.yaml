@@ -3,17 +3,12 @@ apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerTemplate
 metadata:
   name: canopy-test-trigger-template
-  labels:
-    {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
-  annotations:
-    {{- include "canopy-tekton-pipeline.annotations" . | nindent 4 }}
 spec:
   params:
     - name: gitrepositoryurl
       description: The git repository url
     - name: git-revision
       description: The git revision
-      default: {{ .Values.git.backendRevision }}
     - name: git-short-revision
       description: Seven character git sha
     - name: git-ref
@@ -24,8 +19,6 @@ spec:
       kind: PipelineRun
       metadata:
         generateName: canopy-test-pipeline-
-        labels:
-          {{- include "canopy-tekton-pipeline.labels" . | nindent 10 }}
       spec:
         pipelineRef:
           name: canopy-test-pipeline
@@ -50,10 +43,6 @@ apiVersion: triggers.tekton.dev/v1beta1
 kind: Trigger
 metadata:
   name: canopy-test-git-trigger
-  labels:
-    {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
-  annotations:
-    {{- include "canopy-tekton-pipeline.annotations" . | nindent 4 }}
 spec:
   interceptors:
     - ref:
@@ -82,10 +71,6 @@ apiVersion: triggers.tekton.dev/v1beta1
 kind: EventListener
 metadata:
   name: canopy-test-event-listener
-  labels:
-    {{- include "canopy-tekton-pipeline.labels" . | nindent 4 }}
-  annotations:
-    {{- include "canopy-tekton-pipeline.annotations" . | nindent 4 }}
 spec:
   serviceAccountName: pipeline
   triggers:
