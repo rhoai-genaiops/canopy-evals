@@ -790,12 +790,14 @@ def canopy_test_pipeline(
         pvc_name=eval_pvc.outputs['name'],
         mount_path='/prompts',
     )
-    kubernetes.use_secret_as_env(clone_task,
-                                 secret_name='git-auth',
-                                 secret_key_to_env={
-                                    'username': 'GIT_USERNAME',
-                                    'password': 'GIT_PASSWORD',
-                                    })
+    kubernetes.use_secret_as_env(
+        clone_task,
+        secret_name='git-auth',
+        secret_key_to_env={
+            'username': 'GIT_USERNAME',
+            'password': 'GIT_PASSWORD',
+        }
+    )
 
     # Step 2: Scan for all test configs
     scan_task = scan_directory_op()
