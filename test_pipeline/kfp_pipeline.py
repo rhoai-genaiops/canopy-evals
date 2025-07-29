@@ -746,23 +746,31 @@ def run_all_llamastack_tests(
         upload_results_to_s3(all_test_results, tmpdir)
 
 
-@dsl.pipeline(
-    name="Canopy Testing Pipeline",
+dsl.pipeline(
+    name="Canopy Eval",
     description="Pipeline for running canopy tests across repositories"
 )
 def canopy_test_pipeline(
     repo_url: str,
     branch: str = "main",
-    workspace_pvc: str = "canopy-workspace-pvc",
     base_url: str = "",
     backend_url: str = "",
     secret_name: str = "test-results",
 ):
+
+    # Pre-step: Create a PVC
+    eval_pvc = kubernetes.CreatePVC(
+        pvc_name_suffix='-eval-pvc',
+        access_modes=['ReadWriteOnce'],
+        size='3Gi',
+        storage_class_name='gp3-csi',
+    )
+
     # Step 1: Clone repo
     clone_task = git_clone_op(repo_url=repo_url, branch=branch)
     kubernetes.mount_pvc(
         clone_task,
-        pvc_name=workspace_pvc,
+        pvc_name=eval_pvc.outputs['name'],
         mount_path='/prompts',
     )
 
@@ -771,7 +779,7 @@ def canopy_test_pipeline(
     scan_task.after(clone_task)
     kubernetes.mount_pvc(
         scan_task,
-        pvc_name=workspace_pvc,
+        pvc_name=eval_pvc.outputs['name'],
         mount_path='/prompts',
     )
 
@@ -784,7 +792,7 @@ def canopy_test_pipeline(
     test_task.after(scan_task)
     kubernetes.mount_pvc(
         test_task,
-        pvc_name=workspace_pvc,
+        pvc_name=eval_pvc.outputs['name'],
         mount_path='/prompts',
     )
     
@@ -806,7 +814,6 @@ if __name__ == '__main__':
     arguments = {
         "repo_url": "https://github.com/rhoai-genaiops/canopy-evals",
         "branch": "main",
-        "workspace_pvc": "canopy-eval-pvc",
         "base_url": "http://llama-stack.user1-test.svc.cluster.local:80",
         "backend_url": "http://canopy-backend.user1-canopy.svc.cluster.local:8000",
         "secret_name": "test-results",
