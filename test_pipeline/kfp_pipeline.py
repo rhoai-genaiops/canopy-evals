@@ -87,6 +87,7 @@ def run_all_llamastack_tests(
     llamastack_configs: List[dict],  # List of config dictionaries
     base_url: str,
     backend_url: str,
+    git_hash: str = "test",
 ):
     """Run llamastack-based tests from multiple configuration files."""
     import os
@@ -140,7 +141,7 @@ def run_all_llamastack_tests(
         return send_request(payload, url)
 
     # Function to upload individual results to S3
-    def upload_results_to_s3(all_test_results, tmpdir):
+    def upload_results_to_s3(all_test_results, tmpdir, git_hash="test"):
         import boto3
         from botocore.exceptions import ClientError
         
@@ -163,8 +164,6 @@ def run_all_llamastack_tests(
             aws_secret_access_key=secret_key,
             region_name=region
         )
-        
-        git_hash = "aa97398"  # Hardcoded as requested
         
         # Group results by endpoint (usecase)
         endpoint_results = {}
@@ -743,10 +742,10 @@ def run_all_llamastack_tests(
         print(f"Generated endpoint-specific HTML files with {total_tests} total test results")
         
         # Upload individual HTML files to S3 for each endpoint
-        upload_results_to_s3(all_test_results, tmpdir)
+        upload_results_to_s3(all_test_results, tmpdir, git_hash)
 
 
-dsl.pipeline(
+@dsl.pipeline(
     name="Canopy Eval",
     description="Pipeline for running canopy tests across repositories"
 )
@@ -756,6 +755,7 @@ def canopy_test_pipeline(
     base_url: str = "",
     backend_url: str = "",
     secret_name: str = "test-results",
+    git_hash: str = "test"
 ):
 
     # Pre-step: Create a PVC
@@ -788,6 +788,7 @@ def canopy_test_pipeline(
         llamastack_configs=scan_task.outputs["llamastack_configs"],
         base_url=base_url,
         backend_url=backend_url,
+        git_hash=git_hash,
     )
     test_task.after(scan_task)
     kubernetes.mount_pvc(
@@ -817,6 +818,7 @@ if __name__ == '__main__':
         "base_url": "http://llama-stack.user1-test.svc.cluster.local:80",
         "backend_url": "http://canopy-backend.user1-canopy.svc.cluster.local:8000",
         "secret_name": "test-results",
+        "git_hash": "test",
     }
         
     namespace_file_path =\
