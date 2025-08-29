@@ -30,6 +30,22 @@ spec:
       type: string
       default: {{ .Values.kfp.backendUrl | quote }}
       description: Backend URL for canopy
+    - name: PROCESSOR
+      type: string
+      description: "Processor/model path"
+      default: "RedHatAI/Llama-3.2-3B-Instruct-quantized.w8a8"
+    - name: DATA_CONFIG
+      type: string
+      description: "Data configuration JSON"
+      default: '{"type":"emulated","prompt_tokens":512,"output_tokens":128}'
+    - name: RATE_TYPE
+      type: string
+      description: "Rate type for benchmark"
+      default: "synchronous"
+    - name: MAX_SECONDS
+      type: string
+      description: "Maximum benchmark duration in seconds"
+      default: "1800"
   tasks:
     - name: git-clone
       taskRef:
@@ -72,5 +88,28 @@ spec:
           value: "$(params.GIT_REVISION)"
         - name: GIT_SHORT_REVISION
           value: "$(params.GIT_SHORT_REVISION)"
+      runAfter:
+        - git-clone
+    - name: guidellm-task
+      taskRef:
+        name: guidellm-task
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+      params:
+        - name: BASE_URL
+          value: "$(params.BASE_URL)"
+        - name: MODEL_NAME
+          value: "$(params.MODEL_NAME)"
+        - name: PROCESSOR
+          value: "$(params.PROCESSOR)"
+        - name: DATA_CONFIG
+          value: "$(params.DATA_CONFIG)"
+        - name: OUTPUT_FILENAME
+          value: "$(params.MODEL_NAME)-results.yaml"
+        - name: RATE_TYPE
+          value: "$(params.RATE_TYPE)"
+        - name: MAX_SECONDS
+          value: "$(params.MAX_SECONDS)"
       runAfter:
         - git-clone
