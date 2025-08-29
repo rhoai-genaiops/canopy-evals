@@ -30,6 +30,10 @@ spec:
       type: string
       default: {{ .Values.kfp.backendUrl | quote }}
       description: Backend URL for canopy
+    - name: MODEL_NAME
+      type: string
+      description: "Model name identifier"
+      default: "llama32"
     - name: PROCESSOR
       type: string
       description: "Processor/model path"
