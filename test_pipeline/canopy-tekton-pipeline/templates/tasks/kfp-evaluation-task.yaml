@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: execute-kfp-pipeline
+  name: kfp-evaluation-task
 spec:
   workspaces:
     - name: output
@@ -30,7 +30,7 @@ spec:
       type: string
       default: "latest"
   steps:
-  - name: execute-kfp-pipeline
+  - name: kfp-evaluation-task
     workingDir: $(workspaces.output.path)/test_pipeline
     image: registry.redhat.io/ubi9/python-311:latest
     command: ["/bin/sh", "-c"]

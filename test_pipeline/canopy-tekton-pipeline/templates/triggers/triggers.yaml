@@ -26,13 +26,7 @@ spec:
           name: canopy-test-pipeline
         params:
           - name: GIT_URL
-            value: $(tt.params.gitrepositoryurl)
-          - name: GIT_BRANCH
-            value: $(tt.params.git-branch)
-          - name: GIT_REVISION
-            value: $(tt.params.git-revision)
-          - name: GIT_SHORT_REVISION
-            value: $(tt.params.git-short-revision)
+            value: {{ .Values.git.eval_url | quote }}
           - name: BASE_URL
             value: {{ .Values.kfp.baseUrl | quote }}
           - name: BACKEND_URL
@@ -61,14 +55,6 @@ spec:
           - expression: body.ref.split('/')[2]
             key: branch_name
   bindings:
-    - name: git-branch
-      value: $(extensions.branch_name)
-    - name: git-revision
-      value: $(body.head_commit.id)
-    - name: git-short-revision
-      value: $(extensions.truncated_sha)
-    - name: gitrepositoryurl
-      value: $(body.repository.clone_url)
     - name: git-ref
       value: $(body.ref)
   template:

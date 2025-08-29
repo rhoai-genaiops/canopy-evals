@@ -53,9 +53,9 @@ spec:
           value: "true"
         - name: SSL_VERIFY
           value: "false"
-    - name: execute-kfp-pipeline
+    - name: kfp-evaluation-task
       taskRef:
-        name: execute-kfp-pipeline
+        name: kfp-evaluation-task
       workspaces:
         - name: output
           workspace: shared-workspace
