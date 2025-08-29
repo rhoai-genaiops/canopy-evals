@@ -98,7 +98,7 @@ spec:
       taskRef:
         name: guidellm-task
       workspaces:
-        - name: output
+        - name: shared-workspace
           workspace: shared-workspace
       params:
         - name: BASE_URL
@@ -115,5 +115,3 @@ spec:
           value: "$(params.RATE_TYPE)"
         - name: MAX_SECONDS
           value: "$(params.MAX_SECONDS)"
-      runAfter:
-        - git-clone
