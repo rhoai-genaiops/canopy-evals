@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: guidellm-config
-data:
+data: 
   # Default configuration for llama32-3b
   llama32-3b.yaml: |
     TARGET: "http://llama32-3b.llama-serve.svc.cluster.local:8000/v1"
