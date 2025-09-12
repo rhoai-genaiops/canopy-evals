@@ -94,7 +94,6 @@ spec:
           
           # Package results
           tar czf "${RESULT_DIR}.tar.gz" "$RESULT_DIR"
-          mv "${RESULT_DIR}.tar.gz" "$(workspaces.shared-workspace.path)/"
           echo "Results packaged to: ${RESULT_DIR}.tar.gz"
           echo "Contents of workspace:"
           ls -la
