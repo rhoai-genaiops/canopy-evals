@@ -54,6 +54,10 @@ spec:
       type: string
       description: "Maximum benchmark duration in seconds"
       default: "1800"
+    - name: MAX_REQUESTS
+      type: string
+      description: "Maximum number of requests to send"
+      default: "5"
   tasks:
     - name: git-clone
       taskRef:
@@ -121,3 +125,5 @@ spec:
           value: "$(params.RATE_TYPE)"
         - name: MAX_SECONDS
           value: "$(params.MAX_SECONDS)"
+        - name: MAX_REQUESTS
+          value: "$(params.MAX_REQUESTS)"

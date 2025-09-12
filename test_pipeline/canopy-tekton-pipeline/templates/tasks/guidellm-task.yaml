@@ -40,6 +40,10 @@ spec:
       type: string
       description: "Maximum benchmark duration in seconds"
       default: "1800"
+    - name: MAX_REQUESTS
+      type: string
+      description: "Maximum number of requests to send"
+      default: "5"
     - name: GUIDELLM_IMAGE
       type: string
       description: "Guidellm container image"
@@ -58,6 +62,7 @@ spec:
         - "--output-path=$(workspaces.shared-workspace.path)/$(params.OUTPUT_FILENAME)"
         - "--rate-type=$(params.RATE_TYPE)"
         - "--max-seconds=$(params.MAX_SECONDS)"
+        - "--max-requests=$(params.MAX_REQUESTS)"
     - name: extract-results
       image: "registry.access.redhat.com/ubi9/ubi"
       workingDir: "$(workspaces.shared-workspace.path)"
