@@ -1,7 +1,8 @@
 USER_NAME: "your-username"
 kfp:
-  baseUrl: "http://llama-stack"
+  llsUrl: "http://llama-stack"
   backendUrl: "http://canopy-backend"
+  endpointPath: "/summarize"
 secrets:
   s3:
     name: "test-results"

@@ -22,18 +22,22 @@ spec:
       type: string
       default: "latest"
       description: Short Git commit hash
-    - name: BASE_URL
+    - name: LLS_URL
       type: string
-      default: {{ .Values.kfp.baseUrl | quote }}
+      default: {{ .Values.kfp.llsUrl | quote }}
       description: Base URL for LlamaStack
     - name: BACKEND_URL
       type: string
       default: {{ .Values.kfp.backendUrl | quote }}
       description: Backend URL for canopy
+    - name: ENDPOINT_PATH
+      type: string
+      default: {{ .Values.kfp.endpointPath | quote }}
+      description: Endpoint path for guidellm benchmarking
     - name: MODEL_NAME
       type: string
       description: "Model name identifier"
-      default: "llama32"
+      default: "canopy_custom"
     - name: PROCESSOR
       type: string
       description: "Processor/model path"
@@ -80,8 +84,8 @@ spec:
         - name: output
           workspace: shared-workspace
       params:
-        - name: BASE_URL
-          value: "$(params.BASE_URL)"
+        - name: LLS_URL
+          value: "$(params.LLS_URL)"
         - name: BACKEND_URL
           value: "$(params.BACKEND_URL)"
         - name: GIT_URL
@@ -102,7 +106,9 @@ spec:
           workspace: shared-workspace
       params:
         - name: BASE_URL
-          value: "$(params.BASE_URL)"
+          value: "$(params.BACKEND_URL)"
+        - name: ENDPOINT_PATH
+          value: "$(params.ENDPOINT_PATH)"
         - name: MODEL_NAME
           value: "$(params.MODEL_NAME)"
         - name: PROCESSOR

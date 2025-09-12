@@ -27,10 +27,12 @@ spec:
         params:
           - name: GIT_URL
             value: {{ .Values.git.eval_url | quote }}
-          - name: BASE_URL
-            value: {{ .Values.kfp.baseUrl | quote }}
+          - name: LLS_URL
+            value: {{ .Values.kfp.llsUrl | quote }}
           - name: BACKEND_URL
             value: {{ .Values.kfp.backendUrl | quote }}
+          - name: ENDPOINT_PATH
+            value: {{ .Values.kfp.endpointPath | quote }}
         workspaces:
         - name: shared-workspace
           persistentVolumeClaim:
