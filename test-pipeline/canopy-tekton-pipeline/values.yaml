@@ -6,5 +6,3 @@ kfp:
 secrets:
   s3:
     name: "test-results"
-git:
-  eval_url: https://github.com/rhoai-genaiops/canopy-evals
