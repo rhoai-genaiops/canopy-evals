@@ -11,7 +11,7 @@ spec:
     - name: BASE_URL
       type: string
       description: "Base URL of the target service"
-      default: "https://canopy-backend-user1-test.apps.cluster-tcdr7.tcdr7.sandbox1789.opentlc.com"
+      default: "http://canopy-backend"
     - name: ENDPOINT_PATH
       type: string
       description: "Endpoint path to append to base URL"
