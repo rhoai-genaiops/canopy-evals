@@ -11,3 +11,5 @@ scoring_params:
 tests:
   - prompt: "Llama 3.2 is a state-of-the-art language model that excels in various natural language processing tasks, including summarization, translation, and question answering."
     expected_result: "Llama 3.2 is a top-tier language model for NLP tasks."
+  - prompt: ""           # add your own example prompt here 👈
+    expected_result: ""  # and expected result here 👈

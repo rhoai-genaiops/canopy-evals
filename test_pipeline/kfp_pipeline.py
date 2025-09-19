@@ -771,7 +771,7 @@ def canopy_test_pipeline(
     branch: str = "main",
     base_url: str = "",
     backend_url: str = "",
-    secret_name: str = "test-results",
+    secret_name: str = "aws-connection-test-results",
     git_hash: str = "test"
 ):
 
@@ -825,7 +825,7 @@ def canopy_test_pipeline(
     # Add environment variables from Kubernetes secret for S3 access
     kubernetes.use_secret_as_env(
         test_task,
-        secret_name="test-results",
+        secret_name="aws-connection-test-results",
         secret_key_to_env={
             'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',
             'AWS_DEFAULT_REGION': 'AWS_DEFAULT_REGION', 
@@ -838,11 +838,11 @@ def canopy_test_pipeline(
 
 if __name__ == '__main__':
     arguments = {
-        "repo_url": "https://github.com/rhoai-genaiops/canopy-evals",
+        "repo_url": "https://<USER_NAME>:<PASSWORD>@<GIT_SERVER>/<USER_NAME>/canopy-evals.git", # 🚨 replace with your own repo URL
         "branch": "main",
-        "base_url": "http://llama-stack.user1-test.svc.cluster.local:80",
-        "backend_url": "http://canopy-backend.user1-canopy.svc.cluster.local:8000",
-        "secret_name": "test-results",
+        "base_url": "http://llama-stack-service:8321",
+        "backend_url": "http://canopy-backend:8000",
+        "secret_name": "aws-connection-test-results",
         "git_hash": "test",
     }
         
