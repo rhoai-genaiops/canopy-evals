@@ -9,7 +9,7 @@ spec:
   params:
     - name: GIT_URL
       type: string
-      default: https://github.com/rhoai-genaiops/canopy-evals
+      default: {{ .Values.repo_url }}
       description: Git repository URL
     - name: GIT_BRANCH
       type: string
